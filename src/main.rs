@@ -1,3 +1,4 @@
+mod arp;
 mod cli;
 mod ethernet;
 mod ip_protcol;
@@ -11,6 +12,7 @@ use std::fs::OpenOptions;
 use std::io::Write;
 
 use crate::{
+    arp::ArpPacket,
     ethernet::{EtherType, EthernetFrame},
     ipv4::IPv4Packet,
     ipv6::IPv6Packet,
@@ -87,18 +89,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
             EtherType::ARP => {
-                println!(
-                    "{} [ARP] ({} bytes)",
-                    timeval_to_string(packet.header.ts),
-                    ethernet.payload.len()
-                );
+                if let Some(arp) = ArpPacket::parse(ethernet.payload) {
+                    if debug_mode {
+                        println!("{} {:?}", timeval_to_string(packet.header.ts), arp)
+                    } else {
+                        println!("{} {arp}", timeval_to_string(packet.header.ts))
+                    }
 
-                writeln!(
-                    file,
-                    "{} [ARP] ({} bytes)",
-                    timeval_to_string(packet.header.ts),
-                    ethernet.payload.len()
-                )?;
+                    writeln!(file, "{} {arp}", timeval_to_string(packet.header.ts))?;
+                };
             }
             EtherType::Unknown(t) => {
                 println!(
