@@ -7,6 +7,8 @@ mod ipv6;
 use chrono::{TimeZone, Utc};
 use libc::timeval;
 use pcap::Capture;
+use std::fs::OpenOptions;
+use std::io::Write;
 
 use crate::{
     ethernet::{EtherType, EthernetFrame},
@@ -24,10 +26,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let debug_mode = matches.get_flag("debug");
     let interface = matches.get_one::<String>("interface").unwrap();
+    let output_file = matches.get_one::<String>("output").unwrap();
 
     if debug_mode {
         println!("Debug mode is enabled")
     }
+
+    let mut file = match OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .open(output_file)
+    {
+        Ok(f) => f,
+        Err(_) => {
+            eprintln!("Failed to open output file: {output_file}");
+            return Ok(());
+        }
+    };
 
     let mut capture = Capture::from_device(interface.as_str())?
         .promisc(true)
@@ -50,7 +66,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     } else {
                         print!("{} {ip}", timeval_to_string(packet.header.ts))
                     }
-                    println!("  Checksum valid: {valid}")
+                    println!("  Checksum valid: {valid}");
+
+                    writeln!(
+                        file,
+                        "{} {ip}  Checksum valid: {valid}",
+                        timeval_to_string(packet.header.ts)
+                    )?;
                 }
             }
             EtherType::IPv6 => {
@@ -60,6 +82,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     } else {
                         println!("{} {ip}", timeval_to_string(packet.header.ts))
                     }
+
+                    writeln!(file, "{} {ip}", timeval_to_string(packet.header.ts))?;
                 }
             }
             EtherType::ARP => {
@@ -68,12 +92,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     timeval_to_string(packet.header.ts),
                     ethernet.payload.len()
                 );
+
+                writeln!(
+                    file,
+                    "{} [ARP] ({} bytes)",
+                    timeval_to_string(packet.header.ts),
+                    ethernet.payload.len()
+                )?;
             }
             EtherType::Unknown(t) => {
                 println!(
                     "{} [Unknown EtherType: {t:#06X}]",
                     timeval_to_string(packet.header.ts)
                 );
+
+                writeln!(
+                    file,
+                    "{} [Unknown EtherType: {t:#06X}]",
+                    timeval_to_string(packet.header.ts)
+                )?;
             }
         }
     }
