@@ -1,7 +1,7 @@
 mod arp;
 mod cli;
 mod ethernet;
-mod ip_protcol;
+mod ip_protocol;
 mod ipv4;
 mod ipv6;
 
