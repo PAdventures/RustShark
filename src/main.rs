@@ -46,11 +46,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if let Some(ip) = IPv4Packet::parse(ethernet.payload) {
                     let valid = IPv4Packet::verify_checksum(ethernet.payload);
                     if debug_mode {
-                        println!("{} {:?}", timeval_to_string(packet.header.ts), ip)
+                        print!("{} {:?}", timeval_to_string(packet.header.ts), ip)
                     } else {
-                        println!("{} {ip}", timeval_to_string(packet.header.ts))
+                        print!("{} {ip}", timeval_to_string(packet.header.ts))
                     }
-                    println!("Checksum valid: {valid}")
+                    println!("  Checksum valid: {valid}")
                 }
             }
             EtherType::IPv6 => {
