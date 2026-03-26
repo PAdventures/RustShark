@@ -4,18 +4,21 @@ mod ethernet;
 mod ip_protocol;
 mod ipv4;
 mod ipv6;
+mod pcap_writer;
+mod tcp;
 
 use chrono::{TimeZone, Utc};
 use libc::timeval;
 use pcap::Capture;
-use std::fs::OpenOptions;
-use std::io::Write;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::{
     arp::ArpPacket,
     ethernet::{EtherType, EthernetFrame},
     ipv4::IPv4Packet,
     ipv6::IPv6Packet,
+    pcap_writer::{PcapWriter, link_type},
 };
 
 fn timeval_to_string(tv: timeval) -> String {
@@ -24,36 +27,71 @@ fn timeval_to_string(tv: timeval) -> String {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let running = Arc::new(AtomicBool::new(true));
+    let r = running.clone();
+
+    ctrlc::set_handler(move || {
+        eprintln!("\nCaught Ctrl+C, flushing and closing...");
+        r.store(false, Ordering::SeqCst);
+    })?;
+
     let matches = cli::cmd().get_matches();
 
     let debug_mode = matches.get_flag("debug");
     let interface = matches.get_one::<String>("interface").unwrap();
     let output_file = matches.get_one::<String>("output").unwrap();
+    let packet_limit = matches
+        .get_one::<String>("packet-count")
+        .unwrap()
+        .parse::<u64>()
+        .unwrap_or(100);
 
     if debug_mode {
         println!("Debug mode is enabled")
     }
 
-    let mut file = match OpenOptions::new()
-        .write(true)
-        .create(true)
-        .truncate(true)
-        .open(output_file)
-    {
-        Ok(f) => f,
-        Err(_) => {
-            eprintln!("Failed to open output file: {output_file}");
-            return Ok(());
-        }
-    };
-
     let mut capture = Capture::from_device(interface.as_str())?
         .promisc(true)
         .open()?;
 
-    println!("Sniffing on interface: {interface}");
+    let dlt = capture.get_datalink();
+    let link = match dlt {
+        pcap::Linktype::ETHERNET => link_type::ETHERNET,
+        pcap::Linktype::RAW => link_type::RAW_IP,
+        pcap::Linktype::LINUX_SLL => link_type::LINUX_SLL,
+        pcap::Linktype::NULL => link_type::NULL,
+        other => {
+            eprintln!("Unsupported datalink: {:?}", other);
+            std::process::exit(1);
+        }
+    };
 
-    while let Ok(packet) = capture.next_packet() {
+    let mut pcap_out = PcapWriter::create(&output_file, 65535, link)?;
+
+    println!("Sniffing on {interface}, writing to {output_file}");
+
+    let mut packet_count = 0u64;
+
+    while running.load(Ordering::SeqCst) {
+        let packet = match capture.next_packet() {
+            Ok(p) => p,
+            Err(pcap::Error::TimeoutExpired) => continue,
+            Err(e) => {
+                eprintln!("Capture error: {e}");
+                break;
+            }
+        };
+
+        let orig_len = packet.header.len;
+
+        pcap_out.write_packet(packet.data, orig_len)?;
+
+        packet_count += 1;
+        if packet_count % packet_limit == 0 {
+            pcap_out.flush()?;
+            eprintln!("Captured {packet_count} packets...");
+        }
+
         let ethernet = match EthernetFrame::parse(packet.data) {
             Some(eth) => eth,
             None => continue,
@@ -69,12 +107,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         print!("{} {ip}", timeval_to_string(packet.header.ts))
                     }
                     println!("  Checksum valid: {valid}");
-
-                    writeln!(
-                        file,
-                        "{} {ip}  Checksum valid: {valid}",
-                        timeval_to_string(packet.header.ts)
-                    )?;
                 }
             }
             EtherType::IPv6 => {
@@ -84,8 +116,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     } else {
                         println!("{} {ip}", timeval_to_string(packet.header.ts))
                     }
-
-                    writeln!(file, "{} {ip}", timeval_to_string(packet.header.ts))?;
                 }
             }
             EtherType::ARP => {
@@ -95,8 +125,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     } else {
                         println!("{} {arp}", timeval_to_string(packet.header.ts))
                     }
-
-                    writeln!(file, "{} {arp}", timeval_to_string(packet.header.ts))?;
                 };
             }
             EtherType::Unknown(t) => {
@@ -104,15 +132,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     "{} [Unknown EtherType: {t:#06X}]",
                     timeval_to_string(packet.header.ts)
                 );
-
-                writeln!(
-                    file,
-                    "{} [Unknown EtherType: {t:#06X}]",
-                    timeval_to_string(packet.header.ts)
-                )?;
             }
         }
     }
 
+    pcap_out.flush()?;
+    eprintln!("Wrote {packet_count} packets to {output_file}");
     Ok(())
 }

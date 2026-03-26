@@ -7,6 +7,7 @@ pub fn cmd() -> Command {
         .arg(arg!(-i --interface [INTERFACE] ... "The interface to monitor").default_value("en0"))
         .arg(
             arg!(-o --output [FILE] ... "Output file to write packets to")
-                .default_value("output.pcap"),
+                .default_value("capture.pcap"),
         )
+        .arg(arg!(-p --"packet-count" [COUNT] ... "The number of packets to store before flushing to disk").default_value("100"))
 }
