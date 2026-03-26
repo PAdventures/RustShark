@@ -1,11 +1,9 @@
-mod arp;
+mod application;
 mod cli;
-mod ethernet;
-mod ip_protocol;
-mod ipv4;
-mod ipv6;
+mod link;
+mod network;
 mod pcap_writer;
-mod tcp;
+mod transport;
 
 use chrono::{TimeZone, Utc};
 use libc::timeval;
@@ -14,10 +12,10 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::{
-    arp::ArpPacket,
-    ethernet::{EtherType, EthernetFrame},
-    ipv4::IPv4Packet,
-    ipv6::IPv6Packet,
+    link::ethernet::{EtherType, EthernetFrame},
+    network::arp::ArpPacket,
+    network::ipv4::IPv4Packet,
+    network::ipv6::IPv6Packet,
     pcap_writer::{PcapWriter, link_type},
 };
 

@@ -1,6 +1,6 @@
 use std::fmt::{Debug, Display};
 
-use crate::ip_protocol::IpProtocol;
+use crate::network::ip_protocol::IpProtocol;
 
 pub struct IPv4Packet<'a> {
     pub ihl: u8,

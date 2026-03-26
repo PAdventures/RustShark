@@ -1,6 +1,6 @@
 use std::fmt::{Debug, Display};
 
-use crate::ip_protocol::IpProtocol;
+use crate::network::ip_protocol::IpProtocol;
 
 pub struct IPv6Packet<'a> {
     pub traffic_class: u8,
