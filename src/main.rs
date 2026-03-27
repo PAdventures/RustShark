@@ -4,9 +4,8 @@ mod link;
 mod network;
 mod pcap_writer;
 mod transport;
+mod utils;
 
-use chrono::{TimeZone, Utc};
-use libc::timeval;
 use pcap::Capture;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -14,48 +13,12 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use crate::{
     link::ethernet::{EtherType, EthernetFrame},
     network::arp::ArpPacket,
-    network::ip_protocol::IpProtocol,
     network::ipv4::IPv4Packet,
     network::ipv6::IPv6Packet,
     pcap_writer::{PcapWriter, link_type},
-    transport::icmp::IcmpPacket,
-    transport::icmpv6::Icmpv6Packet,
-    transport::tcp::TcpSegment,
-    transport::udp::UdpDatagram,
+    transport::dispatch_transport,
+    utils::timeval_to_string,
 };
-
-fn timeval_to_string(tv: timeval) -> String {
-    let datetime = Utc.timestamp_opt(tv.tv_sec as i64, tv.tv_usec as u32 * 1000);
-    datetime.unwrap().to_string()
-}
-
-fn dispatch_transport(ts: timeval, protocol: IpProtocol, payload: &[u8]) {
-    match protocol {
-        IpProtocol::TCP => {
-            if let Some(tcp) = TcpSegment::parse(payload) {
-                println!("{} {tcp}", timeval_to_string(ts))
-            }
-        }
-        IpProtocol::UDP => {
-            if let Some(udp) = UdpDatagram::parse(payload) {
-                println!("{} {udp}", timeval_to_string(ts))
-            }
-        }
-        IpProtocol::ICMP => {
-            if let Some(icmp) = IcmpPacket::parse(payload) {
-                println!("{} {icmp}", timeval_to_string(ts))
-            }
-        }
-        IpProtocol::ICMPv6 => {
-            if let Some(icmpv6) = Icmpv6Packet::parse(payload) {
-                println!("{} {icmpv6}", timeval_to_string(ts))
-            }
-        }
-        _ => {
-            println!("[Transport] Unknown protocol")
-        }
-    }
-}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let running = Arc::new(AtomicBool::new(true));
