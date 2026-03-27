@@ -1,6 +1,9 @@
 use libc::timeval;
 
-use crate::{network::ip_protocol::IpProtocol, utils::timeval_to_string};
+use crate::{
+    application::dispatch_tcp_application, network::ip_protocol::IpProtocol,
+    utils::timeval_to_string,
+};
 
 pub mod icmp;
 pub mod icmpv6;
@@ -11,7 +14,10 @@ pub fn dispatch_transport(ts: timeval, protocol: IpProtocol, payload: &[u8]) {
     match protocol {
         IpProtocol::TCP => {
             if let Some(tcp) = tcp::TcpSegment::parse(payload) {
-                println!("{} {tcp}", timeval_to_string(ts))
+                let result = dispatch_tcp_application(ts, &tcp);
+                if result.is_none() {
+                    println!("{} {tcp}", timeval_to_string(ts))
+                }
             }
         }
         IpProtocol::UDP => {
