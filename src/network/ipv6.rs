@@ -72,7 +72,7 @@ impl<'a> IPv6Packet<'a> {
     }
 }
 
-impl<'a> Display for IPv6Packet<'a> {
+impl Display for IPv6Packet<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -86,7 +86,7 @@ impl<'a> Display for IPv6Packet<'a> {
     }
 }
 
-impl<'a> Debug for IPv6Packet<'a> {
+impl Debug for IPv6Packet<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,

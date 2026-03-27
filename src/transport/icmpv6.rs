@@ -104,7 +104,7 @@ impl<'a> Icmpv6Packet<'a> {
     }
 }
 
-impl<'a> Display for Icmpv6Packet<'a> {
+impl Display for Icmpv6Packet<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,

@@ -49,7 +49,7 @@ impl<'a> EthernetFrame<'a> {
     }
 }
 
-impl<'a> Display for EthernetFrame<'a> {
+impl Display for EthernetFrame<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -61,7 +61,7 @@ impl<'a> Display for EthernetFrame<'a> {
     }
 }
 
-impl<'a> Debug for EthernetFrame<'a> {
+impl Debug for EthernetFrame<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,

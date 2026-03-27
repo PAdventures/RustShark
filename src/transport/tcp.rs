@@ -125,7 +125,7 @@ impl<'a> TcpSegment<'a> {
     }
 }
 
-impl<'a> Display for TcpSegment<'a> {
+impl Display for TcpSegment<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,

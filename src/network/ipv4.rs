@@ -106,7 +106,7 @@ impl<'a> IPv4Packet<'a> {
     }
 }
 
-impl<'a> Display for IPv4Packet<'a> {
+impl Display for IPv4Packet<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -120,7 +120,7 @@ impl<'a> Display for IPv4Packet<'a> {
     }
 }
 
-impl<'a> Debug for IPv4Packet<'a> {
+impl Debug for IPv4Packet<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
