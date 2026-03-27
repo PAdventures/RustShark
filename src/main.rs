@@ -14,14 +14,47 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use crate::{
     link::ethernet::{EtherType, EthernetFrame},
     network::arp::ArpPacket,
+    network::ip_protocol::IpProtocol,
     network::ipv4::IPv4Packet,
     network::ipv6::IPv6Packet,
     pcap_writer::{PcapWriter, link_type},
+    transport::icmp::IcmpPacket,
+    transport::icmpv6::Icmpv6Packet,
+    transport::tcp::TcpSegment,
+    transport::udp::UdpDatagram,
 };
 
 fn timeval_to_string(tv: timeval) -> String {
     let datetime = Utc.timestamp_opt(tv.tv_sec as i64, tv.tv_usec as u32 * 1000);
     datetime.unwrap().to_string()
+}
+
+fn dispatch_transport(ts: timeval, protocol: IpProtocol, payload: &[u8]) {
+    match protocol {
+        IpProtocol::TCP => {
+            if let Some(tcp) = TcpSegment::parse(payload) {
+                println!("{} {tcp}", timeval_to_string(ts))
+            }
+        }
+        IpProtocol::UDP => {
+            if let Some(udp) = UdpDatagram::parse(payload) {
+                println!("{} {udp}", timeval_to_string(ts))
+            }
+        }
+        IpProtocol::ICMP => {
+            if let Some(icmp) = IcmpPacket::parse(payload) {
+                println!("{} {icmp}", timeval_to_string(ts))
+            }
+        }
+        IpProtocol::ICMPv6 => {
+            if let Some(icmpv6) = Icmpv6Packet::parse(payload) {
+                println!("{} {icmpv6}", timeval_to_string(ts))
+            }
+        }
+        _ => {
+            println!("[Transport] Unknown protocol")
+        }
+    }
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -36,6 +69,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let matches = cli::cmd().get_matches();
 
     let debug_mode = matches.get_flag("debug");
+    let immediate_mode = matches.get_flag("immediate");
     let interface = matches.get_one::<String>("interface").unwrap();
     let output_file = matches.get_one::<String>("output").unwrap();
     let packet_limit = matches
@@ -48,8 +82,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("Debug mode is enabled")
     }
 
+    if immediate_mode {
+        println!("Immediate mode is enabled")
+    }
+
     let mut capture = Capture::from_device(interface.as_str())?
         .promisc(true)
+        .immediate_mode(immediate_mode)
         .open()?;
 
     let dlt = capture.get_datalink();
@@ -98,22 +137,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         match ethernet.ether_type {
             EtherType::IPv4 => {
                 if let Some(ip) = IPv4Packet::parse(ethernet.payload) {
-                    let valid = IPv4Packet::verify_checksum(ethernet.payload);
-                    if debug_mode {
-                        print!("{} {:?}", timeval_to_string(packet.header.ts), ip)
-                    } else {
-                        print!("{} {ip}", timeval_to_string(packet.header.ts))
-                    }
-                    println!("  Checksum valid: {valid}");
+                    let _ = IPv4Packet::verify_checksum(ethernet.payload);
+                    dispatch_transport(packet.header.ts, ip.protocol, ip.payload);
                 }
             }
             EtherType::IPv6 => {
                 if let Some(ip) = IPv6Packet::parse(ethernet.payload) {
-                    if debug_mode {
-                        println!("{} {:?}", timeval_to_string(packet.header.ts), ip)
-                    } else {
-                        println!("{} {ip}", timeval_to_string(packet.header.ts))
-                    }
+                    dispatch_transport(packet.header.ts, ip.next_header, ip.payload);
                 }
             }
             EtherType::ARP => {
