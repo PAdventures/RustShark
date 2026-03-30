@@ -35,6 +35,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let immediate_mode = matches.get_flag("immediate");
     let interface = matches.get_one::<String>("interface").unwrap();
     let output_file = matches.get_one::<String>("output").unwrap();
+    let filter = matches.get_one::<String>("filter").unwrap();
     let packet_limit = matches
         .get_one::<String>("packet-count")
         .unwrap()
@@ -53,6 +54,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .promisc(true)
         .immediate_mode(immediate_mode)
         .open()?;
+
+    capture.filter(filter, true)?;
 
     let dlt = capture.get_datalink();
     let link = match dlt {

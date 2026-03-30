@@ -11,4 +11,5 @@ pub fn cmd() -> Command {
                 .default_value("capture.pcap"),
         )
         .arg(arg!(-p --"packet-count" <COUNT> ... "The number of packets to store before flushing to disk").default_value("100"))
+    .    arg(arg!(-f --filter <FILTER> ... "The BPF filter to apply to the capture").default_value(""))
 }
