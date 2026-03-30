@@ -25,7 +25,7 @@ impl<'a> HttpMessage<'a> {
     pub fn parse(data: &'a [u8]) -> Option<Self> {
         let text = std::str::from_utf8(data).ok()?;
 
-        let (header, body) = text.split_once("\r\n\r\n")?;
+        let (header, _) = text.split_once("\r\n\r\n")?;
         let mut header_lines = header.lines();
 
         let first_line = header_lines.next()?;
