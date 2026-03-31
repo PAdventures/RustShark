@@ -1,8 +1,12 @@
 use std::fmt::{Debug, Display};
 
 use bytes::Bytes;
+use libc::timeval;
 
-use crate::network::NetworkPacket;
+use crate::{
+    network::{NetworkPacket, arp::ArpPacket, ipv4::IPv4Packet, ipv6::IPv6Packet},
+    utils::timeval_to_string,
+};
 
 #[derive(Clone)]
 pub struct EthernetFrame {
@@ -53,6 +57,18 @@ impl EthernetFrame {
             .map(|b| format!("{b:02X}"))
             .collect::<Vec<_>>()
             .join(":")
+    }
+
+    pub fn format_frame(count: u64, ts: timeval, frame: EthernetFrame) -> String {
+        if let Some(payload) = frame.payload {
+            match payload {
+                NetworkPacket::IPv4(ipv4) => IPv4Packet::format_packet(count, ts, ipv4),
+                NetworkPacket::IPv6(ipv6) => IPv6Packet::format_packet(count, ts, ipv6),
+                NetworkPacket::ARP(arp) => ArpPacket::format_packet(count, ts, arp),
+            }
+        } else {
+            format!("{count} {} {}", timeval_to_string(ts), frame.to_string())
+        }
     }
 }
 

@@ -1,6 +1,9 @@
 use std::fmt::Display;
 
 use bytes::Bytes;
+use libc::timeval;
+
+use crate::utils::timeval_to_string;
 
 #[derive(Clone)]
 pub struct TlsRecord {
@@ -84,6 +87,10 @@ impl TlsRecord {
             version,
             payload: data.slice(5..5 + length),
         })
+    }
+
+    pub fn format_packet(count: u64, ts: timeval, record: TlsRecord) -> String {
+        format!("{count} {} {}", timeval_to_string(ts), record.to_string())
     }
 }
 

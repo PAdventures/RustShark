@@ -1,8 +1,12 @@
 use std::fmt::Display;
 
 use bytes::Bytes;
+use libc::timeval;
 
-use crate::application::ApplicationMessage;
+use crate::{
+    application::{ApplicationMessage, dns::DnsMessage, http::HttpMessage, tls::TlsRecord},
+    utils::timeval_to_string,
+};
 
 #[derive(Clone)]
 pub struct TcpSegment {
@@ -129,6 +133,18 @@ impl TcpSegment {
             payload: None, // To be parsed later by higher layers
             raw_payload: data.slice(header_length..),
         })
+    }
+
+    pub fn format_packet(count: u64, ts: timeval, segment: TcpSegment) -> String {
+        if let Some(payload) = segment.payload {
+            match payload {
+                ApplicationMessage::HTTP(http) => HttpMessage::format_packet(count, ts, http),
+                ApplicationMessage::DNS(dns) => DnsMessage::format_packet(count, ts, dns),
+                ApplicationMessage::TLS(tls) => TlsRecord::format_packet(count, ts, tls),
+            }
+        } else {
+            format!("{count} {} {}", timeval_to_string(ts), segment.to_string())
+        }
     }
 }
 

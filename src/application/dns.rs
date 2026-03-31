@@ -1,6 +1,9 @@
 use std::fmt::Display;
 
 use bytes::Bytes;
+use libc::timeval;
+
+use crate::utils::timeval_to_string;
 
 #[derive(Debug, Clone)]
 pub struct DnsMessage {
@@ -362,6 +365,10 @@ impl DnsMessage {
             authorities,
             additionals,
         })
+    }
+
+    pub fn format_packet(count: u64, ts: timeval, message: DnsMessage) -> String {
+        format!("{count} {} {}", timeval_to_string(ts), message.to_string())
     }
 }
 

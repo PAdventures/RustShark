@@ -1,6 +1,9 @@
 use std::fmt::Display;
 
 use bytes::Bytes;
+use libc::timeval;
+
+use crate::utils::timeval_to_string;
 
 #[derive(Debug, Clone)]
 pub struct Icmpv6Packet {
@@ -103,6 +106,10 @@ impl Icmpv6Packet {
             checksum,
             payload: data.slice(4..),
         })
+    }
+
+    pub fn format_packet(count: u64, ts: timeval, packet: Icmpv6Packet) -> String {
+        format!("{count} {} {}", timeval_to_string(ts), packet.to_string())
     }
 }
 

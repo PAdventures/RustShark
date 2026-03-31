@@ -18,7 +18,7 @@ use crate::{
     network::ipv4::IPv4Packet,
     network::ipv6::IPv6Packet,
     pcap_writer::{PcapWriter, link_type},
-    transport::dispatch_transport,
+    transport::parse_transport,
     utils::timeval_to_string,
 };
 
@@ -106,43 +106,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             EtherType::IPv4 => {
                 if let Some(mut ip) = IPv4Packet::parse(ethernet.raw_payload.to_owned()) {
                     let _ = IPv4Packet::verify_checksum(ethernet.raw_payload.to_owned());
-                    print!("{packet_count} ");
-                    let result = dispatch_transport(
-                        packet.header.ts,
-                        ip.protocol,
-                        ip.raw_payload.to_owned(),
-                    );
-                    if result.is_none() {
-                        println!("{} {ip}", timeval_to_string(packet.header.ts))
-                    }
+                    let result = parse_transport(ip.protocol, ip.raw_payload.to_owned());
                     ip.payload = result;
                     ethernet.payload = Some(NetworkPacket::IPv4(ip));
                 }
             }
             EtherType::IPv6 => {
                 if let Some(mut ip) = IPv6Packet::parse(ethernet.raw_payload.to_owned()) {
-                    print!("{packet_count} ");
-                    let result = dispatch_transport(
-                        packet.header.ts,
-                        ip.next_header,
-                        ip.raw_payload.to_owned(),
-                    );
-                    if result.is_none() {
-                        println!("{} {ip}", timeval_to_string(packet.header.ts))
-                    }
+                    let result = parse_transport(ip.next_header, ip.raw_payload.to_owned());
                     ip.payload = result;
                     ethernet.payload = Some(NetworkPacket::IPv6(ip));
                 }
             }
             EtherType::ARP => {
                 if let Some(arp) = ArpPacket::parse(ethernet.raw_payload.to_owned()) {
-                    print!("{packet_count} ");
-
-                    if debug_mode {
-                        println!("{} {:?}", timeval_to_string(packet.header.ts), arp)
-                    } else {
-                        println!("{} {arp}", timeval_to_string(packet.header.ts))
-                    }
                     ethernet.payload = Some(NetworkPacket::ARP(arp));
                 };
             }
@@ -153,6 +130,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 );
             }
         }
+
+        println!(
+            "{}",
+            EthernetFrame::format_frame(packet_count, packet.header.ts, ethernet)
+        );
     }
 
     pcap_out.flush()?;

@@ -1,6 +1,9 @@
 use std::fmt::{Debug, Display};
 
 use bytes::Bytes;
+use libc::timeval;
+
+use crate::utils::timeval_to_string;
 
 #[derive(Clone)]
 pub struct ArpPacket {
@@ -112,6 +115,10 @@ impl ArpPacket {
             .map(|b| b.to_string())
             .collect::<Vec<_>>()
             .join(".")
+    }
+
+    pub fn format_packet(count: u64, ts: timeval, packet: ArpPacket) -> String {
+        format!("{count} {} {}", timeval_to_string(ts), packet.to_string())
     }
 }
 

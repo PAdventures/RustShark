@@ -1,6 +1,9 @@
 use std::fmt::Display;
 
 use bytes::Bytes;
+use libc::timeval;
+
+use crate::utils::timeval_to_string;
 
 #[derive(Clone)]
 pub enum HttpMessage {
@@ -71,6 +74,10 @@ impl HttpMessage {
                 body: body_bytes,
             }))
         }
+    }
+
+    pub fn format_packet(count: u64, ts: timeval, message: HttpMessage) -> String {
+        format!("{count} {} {}", timeval_to_string(ts), message.to_string())
     }
 }
 

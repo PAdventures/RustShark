@@ -1,8 +1,15 @@
 use std::fmt::{Debug, Display};
 
 use bytes::Bytes;
+use libc::timeval;
 
-use crate::{network::ip_protocol::IpProtocol, transport::TransportPacket};
+use crate::{
+    network::ip_protocol::IpProtocol,
+    transport::{
+        TransportPacket, icmp::IcmpPacket, icmpv6::Icmpv6Packet, tcp::TcpSegment, udp::UdpDatagram,
+    },
+    utils::timeval_to_string,
+};
 
 #[derive(Clone)]
 pub struct IPv4Packet {
@@ -105,6 +112,19 @@ impl IPv4Packet {
             sum = (sum & 0xFFFF) + (sum >> 16);
         }
         sum == 0xFFFF
+    }
+
+    pub fn format_packet(count: u64, ts: timeval, packet: IPv4Packet) -> String {
+        if let Some(payload) = packet.payload {
+            match payload {
+                TransportPacket::TCP(tcp) => TcpSegment::format_packet(count, ts, tcp),
+                TransportPacket::UDP(udp) => UdpDatagram::format_packet(count, ts, udp),
+                TransportPacket::ICMP(icmp) => IcmpPacket::format_packet(count, ts, icmp),
+                TransportPacket::ICMPv6(icmpv6) => Icmpv6Packet::format_packet(count, ts, icmpv6),
+            }
+        } else {
+            format!("{count} {} {}", timeval_to_string(ts), packet.to_string())
+        }
     }
 }
 
