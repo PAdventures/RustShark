@@ -7,6 +7,7 @@ use crate::{
 
 pub mod icmp;
 pub mod icmpv6;
+pub mod igmp;
 pub mod tcp;
 pub mod udp;
 
@@ -16,6 +17,7 @@ pub enum TransportPacket {
     UDP(udp::UdpDatagram),
     ICMP(icmp::IcmpPacket),
     ICMPv6(icmpv6::Icmpv6Packet),
+    IGMP(igmp::IgmpMessage),
 }
 
 pub fn parse_transport(protocol: IpProtocol, payload: Bytes) -> Option<TransportPacket> {
@@ -40,6 +42,11 @@ pub fn parse_transport(protocol: IpProtocol, payload: Bytes) -> Option<Transport
         IpProtocol::ICMPv6 => {
             if let Some(icmpv6) = icmpv6::Icmpv6Packet::parse(payload) {
                 return Some(TransportPacket::ICMPv6(icmpv6));
+            }
+        }
+        IpProtocol::IGMP => {
+            if let Some(igmp) = igmp::IgmpMessage::parse(payload) {
+                return Some(TransportPacket::IGMP(igmp));
             }
         }
         _ => {

@@ -6,7 +6,8 @@ use libc::timeval;
 use crate::{
     network::ip_protocol::IpProtocol,
     transport::{
-        TransportPacket, icmp::IcmpPacket, icmpv6::Icmpv6Packet, tcp::TcpSegment, udp::UdpDatagram,
+        TransportPacket, icmp::IcmpPacket, icmpv6::Icmpv6Packet, igmp::IgmpMessage,
+        tcp::TcpSegment, udp::UdpDatagram,
     },
     utils::timeval_to_string,
 };
@@ -120,6 +121,7 @@ impl IPv4Packet {
                 TransportPacket::TCP(tcp) => return TcpSegment::format_packet(count, ts, tcp),
                 TransportPacket::UDP(udp) => return UdpDatagram::format_packet(count, ts, udp),
                 TransportPacket::ICMP(icmp) => return IcmpPacket::format_packet(count, ts, icmp),
+                TransportPacket::IGMP(igmp) => return IgmpMessage::format_packet(count, ts, igmp),
                 _ => (),
             }
         }

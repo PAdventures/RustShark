@@ -2,6 +2,7 @@
 pub enum IpProtocol {
     IPv6HopByHop,
     ICMP,
+    IGMP,
     TCP,
     UDP,
     ICMPv6,
@@ -13,6 +14,7 @@ impl From<u8> for IpProtocol {
         match v {
             0 => Self::IPv6HopByHop,
             1 => Self::ICMP,
+            2 => Self::IGMP,
             6 => Self::TCP,
             17 => Self::UDP,
             58 => Self::ICMPv6,
