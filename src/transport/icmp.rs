@@ -1,14 +1,16 @@
 use std::fmt::Display;
 
-#[derive(Debug)]
-pub struct IcmpPacket<'a> {
+use bytes::Bytes;
+
+#[derive(Debug, Clone)]
+pub struct IcmpPacket {
     pub icmp_type: IcmpType,
     pub code: u8,
     pub checksum: u16,
-    pub payload: &'a [u8],
+    pub payload: Bytes,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum IcmpType {
     EchoReply,
     EchoRequest,
@@ -45,8 +47,8 @@ impl IcmpType {
     }
 }
 
-impl<'a> IcmpPacket<'a> {
-    pub fn parse(data: &'a [u8]) -> Option<Self> {
+impl IcmpPacket {
+    pub fn parse(data: Bytes) -> Option<Self> {
         if data.len() < 4 {
             return None;
         }
@@ -59,12 +61,12 @@ impl<'a> IcmpPacket<'a> {
             icmp_type,
             code,
             checksum,
-            payload: &data[4..],
+            payload: data.slice(4..),
         })
     }
 }
 
-impl Display for IcmpPacket<'_> {
+impl Display for IcmpPacket {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,

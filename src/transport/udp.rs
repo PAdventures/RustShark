@@ -1,15 +1,20 @@
 use std::fmt::Display;
 
-#[derive(Debug)]
-pub struct UdpDatagram<'a> {
+use bytes::Bytes;
+
+use crate::application::ApplicationMessage;
+
+#[derive(Clone)]
+pub struct UdpDatagram {
     pub source_port: u16,
     pub destination_port: u16,
     pub length: u16,
     pub checksum: u16,
-    pub payload: &'a [u8],
+    pub payload: Option<ApplicationMessage>,
+    pub raw_payload: Bytes,
 }
 
-impl<'a> UdpDatagram<'a> {
+impl UdpDatagram {
     /// UDP header (RFC 768) — fixed 8 bytes:
     ///  0               1               2               3
     ///  0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7
@@ -18,7 +23,7 @@ impl<'a> UdpDatagram<'a> {
     /// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
     /// |             Length            |           Checksum            |
     /// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-    pub fn parse(data: &'a [u8]) -> Option<Self> {
+    pub fn parse(data: Bytes) -> Option<Self> {
         if data.len() < 8 {
             return None;
         }
@@ -32,19 +37,20 @@ impl<'a> UdpDatagram<'a> {
             destination_port,
             length,
             checksum,
-            payload: &data[8..],
+            payload: None, // To be parsed later by higher layers
+            raw_payload: data.slice(8..),
         })
     }
 }
 
-impl Display for UdpDatagram<'_> {
+impl Display for UdpDatagram {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
             "[UDP] Port {} → {} Len={} Checksum={:#06X}",
             self.source_port,
             self.destination_port,
-            self.payload.len(),
+            self.raw_payload.len(),
             self.checksum,
         )
     }

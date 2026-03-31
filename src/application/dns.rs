@@ -1,6 +1,8 @@
 use std::fmt::Display;
 
-#[derive(Debug)]
+use bytes::Bytes;
+
+#[derive(Debug, Clone)]
 pub struct DnsMessage {
     pub transaction_id: u16,
     pub is_response: bool,
@@ -19,13 +21,13 @@ pub struct DnsMessage {
     pub additionals: Vec<DnsAnswer>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DnsQuestion {
     pub name: String,
     pub qtype: DnsType,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DnsAnswer {
     pub name: String,
     pub rtype: DnsType,
@@ -33,7 +35,7 @@ pub struct DnsAnswer {
     pub rdata: DnsRData,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum DnsType {
     A,
     NS,
@@ -63,7 +65,7 @@ impl DnsType {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum DnsRData {
     A([u8; 4]),
     NS(String),
@@ -140,7 +142,7 @@ fn parse_name(data: &[u8], mut pos: usize) -> Option<(String, usize)> {
 }
 
 impl DnsMessage {
-    pub fn parse(data: &[u8]) -> Option<Self> {
+    pub fn parse(data: Bytes) -> Option<Self> {
         fn parse_responses(data: &[u8], mut pos: usize) -> Option<DnsAnswer> {
             let Some((name, next_pos)) = parse_name(data, pos) else {
                 return None;
@@ -315,7 +317,7 @@ impl DnsMessage {
         let mut pos = 12;
 
         for _ in 0..qdcount {
-            let Some((name, next_pos)) = parse_name(data, pos) else {
+            let Some((name, next_pos)) = parse_name(&data, pos) else {
                 return None;
             };
             pos = next_pos;
@@ -329,17 +331,17 @@ impl DnsMessage {
         }
 
         for _ in 0..ancount {
-            let answer = parse_responses(data, pos)?;
+            let answer = parse_responses(&data, pos)?;
             answers.push(answer);
         }
 
         for _ in 0..authcount {
-            let answer = parse_responses(data, pos)?;
+            let answer = parse_responses(&data, pos)?;
             authorities.push(answer);
         }
 
         for _ in 0..addcount {
-            let answer = parse_responses(data, pos)?;
+            let answer = parse_responses(&data, pos)?;
             additionals.push(answer);
         }
 

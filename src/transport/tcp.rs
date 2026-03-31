@@ -1,6 +1,11 @@
 use std::fmt::Display;
 
-pub struct TcpSegment<'a> {
+use bytes::Bytes;
+
+use crate::application::ApplicationMessage;
+
+#[derive(Clone)]
+pub struct TcpSegment {
     pub source_port: u16,
     pub destination_port: u16,
     pub sequence_number: u32,
@@ -10,10 +15,11 @@ pub struct TcpSegment<'a> {
     pub window_size: u16,
     pub checksum: u16,
     pub urgent_pointer: u16,
-    pub payload: &'a [u8],
+    pub payload: Option<ApplicationMessage>,
+    pub raw_payload: Bytes,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct TcpFlags {
     pub cwr: bool,
     pub ece: bool,
@@ -71,7 +77,7 @@ impl Display for TcpFlags {
     }
 }
 
-impl<'a> TcpSegment<'a> {
+impl TcpSegment {
     /// TCP header (RFC 9293):
     /// ```
     ///  0               1               2               3
@@ -90,7 +96,7 @@ impl<'a> TcpSegment<'a> {
     /// |           Checksum            |         Urgent Pointer        |
     /// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
     /// ```
-    pub fn parse(data: &'a [u8]) -> Option<Self> {
+    pub fn parse(data: Bytes) -> Option<Self> {
         if data.len() < 20 {
             return None;
         };
@@ -120,12 +126,13 @@ impl<'a> TcpSegment<'a> {
             window_size,
             checksum,
             urgent_pointer,
-            payload: &data[header_length..],
+            payload: None, // To be parsed later by higher layers
+            raw_payload: data.slice(header_length..),
         })
     }
 }
 
-impl Display for TcpSegment<'_> {
+impl Display for TcpSegment {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -136,7 +143,7 @@ impl Display for TcpSegment<'_> {
             self.acknowledgment_number,
             self.window_size,
             self.flags,
-            self.payload.len()
+            self.raw_payload.len()
         )
     }
 }

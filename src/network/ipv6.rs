@@ -1,8 +1,11 @@
 use std::fmt::{Debug, Display};
 
-use crate::network::ip_protocol::IpProtocol;
+use bytes::Bytes;
 
-pub struct IPv6Packet<'a> {
+use crate::{network::ip_protocol::IpProtocol, transport::TransportPacket};
+
+#[derive(Clone)]
+pub struct IPv6Packet {
     pub traffic_class: u8,
     pub flow_label: u32,
     pub payload_length: u16,
@@ -10,10 +13,11 @@ pub struct IPv6Packet<'a> {
     pub hop_limit: u8,
     pub source_address: [u8; 16],
     pub destination_address: [u8; 16],
-    pub payload: &'a [u8],
+    pub payload: Option<TransportPacket>,
+    pub raw_payload: Bytes,
 }
 
-impl<'a> IPv6Packet<'a> {
+impl IPv6Packet {
     /// IPv6 fixed header (RFC 8200) is always 40 bytes:
     /// ```
     ///  0               1               2               3
@@ -30,7 +34,7 @@ impl<'a> IPv6Packet<'a> {
     /// |                          (128 bits)                           |
     /// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
     /// ```
-    pub fn parse(data: &'a [u8]) -> Option<Self> {
+    pub fn parse(data: Bytes) -> Option<Self> {
         if data.len() < 40 {
             return None;
         }
@@ -48,7 +52,6 @@ impl<'a> IPv6Packet<'a> {
         let hop_limit = data[7];
         let src: [u8; 16] = data[8..24].try_into().unwrap();
         let dst: [u8; 16] = data[24..40].try_into().unwrap();
-        let payload = &data[40..];
 
         Some(Self {
             traffic_class,
@@ -58,7 +61,8 @@ impl<'a> IPv6Packet<'a> {
             hop_limit,
             source_address: src,
             destination_address: dst,
-            payload,
+            payload: None, // To be parsed later by higher layers
+            raw_payload: data.slice(40..),
         })
     }
 
@@ -72,7 +76,7 @@ impl<'a> IPv6Packet<'a> {
     }
 }
 
-impl Display for IPv6Packet<'_> {
+impl Display for IPv6Packet {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -86,7 +90,7 @@ impl Display for IPv6Packet<'_> {
     }
 }
 
-impl Debug for IPv6Packet<'_> {
+impl Debug for IPv6Packet {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -98,7 +102,7 @@ impl Debug for IPv6Packet<'_> {
             self.payload_length,
             self.next_header,
             self.hop_limit,
-            self.payload
+            self.raw_payload
         )
     }
 }

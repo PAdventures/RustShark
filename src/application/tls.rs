@@ -1,12 +1,15 @@
 use std::fmt::Display;
 
-pub struct TlsRecord<'a> {
+use bytes::Bytes;
+
+#[derive(Clone)]
+pub struct TlsRecord {
     pub content_type: TlsContentType,
     pub version: TlsVersion,
-    pub payload: &'a [u8],
+    pub payload: Bytes,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum TlsContentType {
     ChangeCipherSpec,
     Alert,
@@ -15,7 +18,7 @@ pub enum TlsContentType {
     Unknown(u8),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum TlsHandshakeType {
     ClientHello,
     ServerHello,
@@ -25,7 +28,7 @@ pub enum TlsHandshakeType {
     Unknown(u8),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TlsVersion {
     pub major: u8,
     pub minor: u8,
@@ -43,8 +46,8 @@ impl Display for TlsVersion {
     }
 }
 
-impl<'a> TlsRecord<'a> {
-    pub fn parse(data: &'a [u8]) -> Option<Self> {
+impl TlsRecord {
+    pub fn parse(data: Bytes) -> Option<Self> {
         if data.len() < 5 {
             return None;
         }
@@ -79,12 +82,12 @@ impl<'a> TlsRecord<'a> {
         Some(Self {
             content_type,
             version,
-            payload: &data[5..5 + length],
+            payload: data.slice(5..5 + length),
         })
     }
 }
 
-impl Display for TlsRecord<'_> {
+impl Display for TlsRecord {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self.content_type {
             TlsContentType::Handshake => {

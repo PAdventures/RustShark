@@ -1,45 +1,53 @@
 use std::fmt::Display;
 
-pub enum HttpMessage<'a> {
-    Request(HttpRequest<'a>),
-    Response(HttpResponse<'a>),
+use bytes::Bytes;
+
+#[derive(Clone)]
+pub enum HttpMessage {
+    Request(HttpRequest),
+    Response(HttpResponse),
 }
 
-pub struct HttpRequest<'a> {
-    pub method: &'a str,
-    pub path: &'a str,
-    pub version: &'a str,
-    pub headers: Vec<(&'a str, &'a str)>,
-    pub body: &'a [u8],
+#[derive(Clone)]
+pub struct HttpRequest {
+    pub method: String,
+    pub path: String,
+    pub version: String,
+    pub headers: Vec<(String, String)>,
+    pub body: Bytes,
 }
 
-pub struct HttpResponse<'a> {
-    pub version: &'a str,
+#[derive(Clone)]
+pub struct HttpResponse {
+    pub version: String,
     pub status: u16,
-    pub reason: &'a str,
-    pub headers: Vec<(&'a str, &'a str)>,
-    pub body: &'a [u8],
+    pub reason: String,
+    pub headers: Vec<(String, String)>,
+    pub body: Bytes,
 }
 
-impl<'a> HttpMessage<'a> {
-    pub fn parse(data: &'a [u8]) -> Option<Self> {
-        let text = std::str::from_utf8(data).ok()?;
+impl HttpMessage {
+    pub fn parse(data: Bytes) -> Option<Self> {
+        let text = String::from_utf8_lossy(&data);
 
         let (header, _) = text.split_once("\r\n\r\n")?;
         let mut header_lines = header.lines();
 
         let first_line = header_lines.next()?;
 
-        let headers: Vec<(&str, &str)> = header_lines.filter_map(|l| l.split_once(": ")).collect();
+        let headers: Vec<(String, String)> = header_lines
+            .filter_map(|l| l.split_once(": ").to_owned())
+            .map(|(k, v)| (k.to_owned(), v.to_owned()))
+            .collect();
 
         let header_len = header.len() + 4;
-        let body_bytes = &data[header_len..];
+        let body_bytes = data.slice(header_len..);
 
         if first_line.starts_with("HTTP/") {
             let mut parts = first_line.splitn(3, " ");
-            let version = parts.next()?;
+            let version = parts.next()?.to_owned();
             let status_str = parts.next()?;
-            let reason = parts.next().unwrap_or("");
+            let reason = parts.next().unwrap_or("").to_owned();
             let status = u16::from_str_radix(status_str, 10).ok()?;
 
             Some(HttpMessage::Response(HttpResponse {
@@ -51,9 +59,9 @@ impl<'a> HttpMessage<'a> {
             }))
         } else {
             let mut parts = first_line.splitn(3, ' ');
-            let method = parts.next()?;
-            let path = parts.next()?;
-            let version = parts.next()?;
+            let method = parts.next()?.to_owned();
+            let path = parts.next()?.to_owned();
+            let version = parts.next()?.to_owned();
 
             Some(HttpMessage::Request(HttpRequest {
                 method,
@@ -66,7 +74,7 @@ impl<'a> HttpMessage<'a> {
     }
 }
 
-impl Display for HttpMessage<'_> {
+impl Display for HttpMessage {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             HttpMessage::Request(req) => write!(f, "{}", req),
@@ -75,13 +83,13 @@ impl Display for HttpMessage<'_> {
     }
 }
 
-impl Display for HttpRequest<'_> {
+impl Display for HttpRequest {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "[HTTP] {} {} {}", self.method, self.path, self.version)
     }
 }
 
-impl Display for HttpResponse<'_> {
+impl Display for HttpResponse {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "[HTTP] {} {} {}", self.version, self.status, self.reason)
     }

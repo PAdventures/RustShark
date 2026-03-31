@@ -1,5 +1,8 @@
 use std::fmt::{Debug, Display};
 
+use bytes::Bytes;
+
+#[derive(Clone)]
 pub struct ArpPacket {
     pub hardware_type: HardwareType,
     pub protocol_type: ProtocolType,
@@ -12,17 +15,17 @@ pub struct ArpPacket {
     pub target_protocol_address: [u8; 4],
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum HardwareType {
     Ethernet,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ProtocolType {
     IPv4,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ArpOperation {
     Request,
     Reply,
@@ -51,7 +54,7 @@ impl ArpPacket {
     /// |                   Target Protocol Address                     |
     /// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
     /// ```
-    pub fn parse(data: &[u8]) -> Option<Self> {
+    pub fn parse(data: Bytes) -> Option<Self> {
         if data.len() < 28 {
             return None;
         };

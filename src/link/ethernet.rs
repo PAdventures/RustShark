@@ -1,13 +1,19 @@
 use std::fmt::{Debug, Display};
 
-pub struct EthernetFrame<'a> {
+use bytes::Bytes;
+
+use crate::network::NetworkPacket;
+
+#[derive(Clone)]
+pub struct EthernetFrame {
     pub destination_mac: [u8; 6],
     pub source_mac: [u8; 6],
     pub ether_type: EtherType,
-    pub payload: &'a [u8],
+    pub payload: Option<NetworkPacket>,
+    pub raw_payload: Bytes,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum EtherType {
     IPv4,
     IPv6,
@@ -15,11 +21,11 @@ pub enum EtherType {
     Unknown(u16),
 }
 
-impl<'a> EthernetFrame<'a> {
+impl EthernetFrame {
     /// Ethernet Type II frame:
     ///
     /// 6 dst MAC | 6 src MAC | 2 EtherType
-    pub fn parse(data: &'a [u8]) -> Option<Self> {
+    pub fn parse(data: Bytes) -> Option<Self> {
         if data.len() < 14 {
             return None;
         }
@@ -37,7 +43,8 @@ impl<'a> EthernetFrame<'a> {
             destination_mac,
             source_mac,
             ether_type,
-            payload: &data[14..],
+            payload: None, // To be parsed later by higher layers
+            raw_payload: data.slice(14..),
         })
     }
 
@@ -49,7 +56,7 @@ impl<'a> EthernetFrame<'a> {
     }
 }
 
-impl Display for EthernetFrame<'_> {
+impl Display for EthernetFrame {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -61,7 +68,7 @@ impl Display for EthernetFrame<'_> {
     }
 }
 
-impl Debug for EthernetFrame<'_> {
+impl Debug for EthernetFrame {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -69,7 +76,7 @@ impl Debug for EthernetFrame<'_> {
             Self::format_mac(&self.source_mac),
             Self::format_mac(&self.destination_mac),
             self.ether_type,
-            self.payload
+            self.raw_payload
         )
     }
 }
