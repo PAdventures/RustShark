@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::io::{BufWriter, Write};
-use std::time::{SystemTime, UNIX_EPOCH};
+
+use libc::timeval;
 
 pub struct PcapWriter {
     writer: BufWriter<File>,
@@ -57,11 +58,9 @@ impl PcapWriter {
         Ok(())
     }
 
-    pub fn write_packet(&mut self, data: &[u8], orig_len: u32) -> std::io::Result<()> {
-        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-
-        let ts_sec = now.as_secs() as u32;
-        let ts_usec = now.subsec_micros();
+    pub fn write_packet(&mut self, ts: timeval, data: &[u8], orig_len: u32) -> std::io::Result<()> {
+        let ts_sec = ts.tv_sec as u32;
+        let ts_usec = ts.tv_usec as u32;
         let cap_len = data.len() as u32;
 
         write_u32_ne(&mut self.writer, ts_sec)?;

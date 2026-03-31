@@ -11,13 +11,14 @@ pub mod icmpv6;
 pub mod tcp;
 pub mod udp;
 
-pub fn dispatch_transport(ts: timeval, protocol: IpProtocol, payload: &[u8]) {
+pub fn dispatch_transport(ts: timeval, protocol: IpProtocol, payload: &[u8]) -> Option<()> {
     match protocol {
         IpProtocol::TCP => {
             if let Some(tcp) = tcp::TcpSegment::parse(payload) {
                 let result = dispatch_tcp_application(ts, &tcp);
                 if result.is_none() {
-                    println!("{} {tcp}", timeval_to_string(ts))
+                    println!("{} {tcp}", timeval_to_string(ts));
+                    return Some(());
                 }
             }
         }
@@ -25,22 +26,26 @@ pub fn dispatch_transport(ts: timeval, protocol: IpProtocol, payload: &[u8]) {
             if let Some(udp) = udp::UdpDatagram::parse(payload) {
                 let result = dispatch_udp_application(ts, &udp);
                 if result.is_none() {
-                    println!("{} {udp}", timeval_to_string(ts))
+                    println!("{} {udp}", timeval_to_string(ts));
+                    return Some(());
                 }
             }
         }
         IpProtocol::ICMP => {
             if let Some(icmp) = icmp::IcmpPacket::parse(payload) {
-                println!("{} {icmp}", timeval_to_string(ts))
+                println!("{} {icmp}", timeval_to_string(ts));
+                return Some(());
             }
         }
         IpProtocol::ICMPv6 => {
             if let Some(icmpv6) = icmpv6::Icmpv6Packet::parse(payload) {
-                println!("{} {icmpv6}", timeval_to_string(ts))
+                println!("{} {icmpv6}", timeval_to_string(ts));
+                return Some(());
             }
         }
         _ => {
-            println!("[Transport] Unknown protocol")
+            return None;
         }
     }
+    return None;
 }

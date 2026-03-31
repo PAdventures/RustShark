@@ -87,7 +87,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let orig_len = packet.header.len;
 
-        pcap_out.write_packet(packet.data, orig_len)?;
+        pcap_out.write_packet(packet.header.ts, packet.data, orig_len)?;
 
         packet_count += 1;
         if packet_count % packet_limit == 0 {
@@ -104,16 +104,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             EtherType::IPv4 => {
                 if let Some(ip) = IPv4Packet::parse(ethernet.payload) {
                     let _ = IPv4Packet::verify_checksum(ethernet.payload);
-                    dispatch_transport(packet.header.ts, ip.protocol, ip.payload);
+                    print!("{packet_count} ");
+                    let result = dispatch_transport(packet.header.ts, ip.protocol, ip.payload);
+                    if result.is_none() {
+                        println!("{} {ip}", timeval_to_string(packet.header.ts))
+                    }
                 }
             }
             EtherType::IPv6 => {
                 if let Some(ip) = IPv6Packet::parse(ethernet.payload) {
-                    dispatch_transport(packet.header.ts, ip.next_header, ip.payload);
+                    print!("{packet_count} ");
+                    let result = dispatch_transport(packet.header.ts, ip.next_header, ip.payload);
+                    if result.is_none() {
+                        println!("{} {ip}", timeval_to_string(packet.header.ts))
+                    }
                 }
             }
             EtherType::ARP => {
                 if let Some(arp) = ArpPacket::parse(ethernet.payload) {
+                    print!("{packet_count} ");
+
                     if debug_mode {
                         println!("{} {:?}", timeval_to_string(packet.header.ts), arp)
                     } else {
@@ -123,7 +133,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             EtherType::Unknown(t) => {
                 println!(
-                    "{} [Unknown EtherType: {t:#06X}]",
+                    "{packet_count} {} [Unknown EtherType: {t:#06X}]",
                     timeval_to_string(packet.header.ts)
                 );
             }
