@@ -3,6 +3,12 @@
 RustShark is a Rust implementation of a packet sniffer, inspired by Wireshark.
 It allows you to capture and analyse network traffic in real-time, providing insights into the data being transmitted over the network.
 
+## Notes
+
+The project is in early stages of development, and currently supports only a limited set of protocols. Future updates will include support for more protocols and additional features such as filtering and advanced analysis tools.
+
+Furthermore, all developement is being done on MacOS, so there may be compatibility issues on other operating systems. Contributions and feedback are welcome to help improve the project and expand its capabilities.
+
 ## Usage
 
 To use RustShark, you must first clone the repository and build the project using Cargo:
@@ -61,8 +67,8 @@ RustShark currently supports the following protocols:
 - DNS
 - TLS
 
-## Notes
+RustShark will try to decode as many layers of the packet as possible, and will print out the decoded information in a human-readable format.
+There is also the option for a debug mode which will print out all info and hexidecimal data of the payload, for the last layer of the packet.
 
-The project is in early stages of development, and currently supports only a limited set of protocols. Future updates will include support for more protocols and additional features such as filtering and advanced analysis tools.
-
-Furthermore, all developement is being done on MacOS, so there may be compatibility issues on other operating systems. Contributions and feedback are welcome to help improve the project and expand its capabilities.
+As packets are captured, RustShark will also insert each packet into a `.pcap` file with the appropriate format and timestamp, allowing for later analysis using other tools such as Wireshark or tcpdump.
+_This is a very useful feature for debugging and testing, as it allows you to capture packets in real-time and then analyse them later using a more powerful tool._
