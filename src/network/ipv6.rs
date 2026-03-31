@@ -55,10 +55,22 @@ impl IPv6Packet {
         let traffic_class = ((data[0] & 0x0F) << 4) | ((data[1] >> 4) & 0x0F);
         let flow_label = u32::from_be_bytes([0, data[1] & 0x0F, data[2], data[3]]);
         let payload_length = u16::from_be_bytes([data[4], data[5]]);
-        let next_header = IpProtocol::from(data[6]);
+        let mut next_header = IpProtocol::from(data[6]);
         let hop_limit = data[7];
         let src: [u8; 16] = data[8..24].try_into().unwrap();
         let dst: [u8; 16] = data[24..40].try_into().unwrap();
+
+        let mut offset = 40;
+
+        match next_header {
+            IpProtocol::IPv6HopByHop => {
+                let hbh_next_header = IpProtocol::from(data[offset]);
+                let hbh_len = (data[offset + 1] as usize + 1) * 8;
+                next_header = hbh_next_header;
+                offset += hbh_len;
+            }
+            _ => (),
+        }
 
         Some(Self {
             traffic_class,
@@ -69,7 +81,7 @@ impl IPv6Packet {
             source_address: src,
             destination_address: dst,
             payload: None, // To be parsed later by higher layers
-            raw_payload: data.slice(40..),
+            raw_payload: data.slice(offset..),
         })
     }
 
