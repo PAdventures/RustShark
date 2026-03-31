@@ -108,7 +108,7 @@ impl Display for Icmpv6Packet<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "[ICMPv6] Type: {:?}  Code: {}  Checksum: {:#06X}  PayloadLen: {}",
+            "[ICMPv6] Type={:?} Code={} Checksum={:#06X} Len={}",
             self.icmp_type,
             self.code,
             self.checksum,

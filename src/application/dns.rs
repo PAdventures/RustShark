@@ -367,7 +367,7 @@ impl Display for DnsMessage {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "[DNS] {} {}  {}  {}  {}  {}",
+            "[DNS] {} {} {} {} {} {}",
             if self.is_response {
                 "Response"
             } else {

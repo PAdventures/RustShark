@@ -53,7 +53,7 @@ impl Display for EthernetFrame<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "[Ethernet II] {} -> {}  Type: {:?}",
+            "[Ethernet II] {} -> {} Type={:?}",
             Self::format_mac(&self.source_mac),
             Self::format_mac(&self.destination_mac),
             self.ether_type
@@ -65,7 +65,7 @@ impl Debug for EthernetFrame<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "[Ethernet II] {} -> {}  Type: {:?}  Payload: {:?}",
+            "[Ethernet II] {} -> {} Type={:?} Payload={:?}",
             Self::format_mac(&self.source_mac),
             Self::format_mac(&self.destination_mac),
             self.ether_type,

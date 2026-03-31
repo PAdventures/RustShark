@@ -117,14 +117,14 @@ impl Display for ArpPacket {
         match self.operation {
             ArpOperation::Request => write!(
                 f,
-                "[ARP] Request  - Who has {}? Tell {} ({})",
+                "[ARP] Request - Who has {}? Tell {} ({})",
                 Self::fmt_ip(&self.target_protocol_address),
                 Self::fmt_ip(&self.sender_protocol_address),
                 Self::fmt_mac(&self.sender_hardware_address)
             ),
             ArpOperation::Reply => write!(
                 f,
-                "[ARP] Reply  - {} is at {} (target: {} {})",
+                "[ARP] Reply - {} is at {} (target: {} {})",
                 Self::fmt_ip(&self.sender_protocol_address),
                 Self::fmt_mac(&self.sender_hardware_address),
                 Self::fmt_ip(&self.target_protocol_address),
@@ -139,7 +139,7 @@ impl Debug for ArpPacket {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "[ARP] Hardware Type: {:?}  Protocol Type: {:?}  Hardware Len: {}  Protocol Len: {}  Operation: {:?}  Sender MAC: {}  Sender IP: {}  Target MAC: {}  Target IP: {}",
+            "[ARP] Hardware Type={:?} Protocol Type={:?} Hardware Len={} Protocol Len={} Operation={:?} Sender MAC={} Sender IP={} Target MAC={} Target IP={}",
             self.hardware_type,
             self.protocol_type,
             self.hardware_length,

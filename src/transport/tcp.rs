@@ -129,7 +129,7 @@ impl Display for TcpSegment<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "[TCP] Port {} → {}  Seq: {}  Ack: {}  Win: {}  Flags: [{}]  PayloadLen: {}",
+            "[TCP] Port {} → {} Seq={} Ack={} Win={} Flags=[{}] Len={}",
             self.source_port,
             self.destination_port,
             self.sequence_number,

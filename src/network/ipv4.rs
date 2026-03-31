@@ -110,7 +110,7 @@ impl Display for IPv4Packet<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "[IPv4] {} → {}  TTL: {}  Proto: {:?}  Len: {}",
+            "[IPv4] {} → {} TTL={} Proto={:?} Len={}",
             Self::fmt_ip(&self.source_address),
             Self::fmt_ip(&self.destination_address),
             self.ttl,
@@ -124,7 +124,7 @@ impl Debug for IPv4Packet<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "[IPv4] {} → {}  IHL: {}  DSCP: {}  ECN: {}  Len: {}  ID: {}  Flags: {}  Fragment Offset: {}  TTL: {}  Proto: {:?}  Checksum: {}  Payload: {:?}",
+            "[IPv4] {} → {} IHL={} DSCP={} ECN={} Len={} ID={} Flags={} Fragment Offset={} TTL={} Proto={:?} Checksum={} Payload={:?}",
             Self::fmt_ip(&self.source_address),
             Self::fmt_ip(&self.destination_address),
             self.ihl,

@@ -41,11 +41,11 @@ impl Display for UdpDatagram<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "[UDP] Port {} → {}  Len: {}  PayloadLen: {}",
+            "[UDP] Port {} → {} Len={} Checksum={:#06X}",
             self.source_port,
             self.destination_port,
-            self.length,
             self.payload.len(),
+            self.checksum,
         )
     }
 }

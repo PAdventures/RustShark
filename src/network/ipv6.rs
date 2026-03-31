@@ -76,7 +76,7 @@ impl Display for IPv6Packet<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "[IPv6] {} → {}  Hop Limit: {}  Next: {:?}  PayloadLen: {}",
+            "[IPv6] {} → {} Hop={} Next={:?} Len={}",
             Self::fmt_ip(&self.source_address),
             Self::fmt_ip(&self.destination_address),
             self.hop_limit,
@@ -90,7 +90,7 @@ impl Debug for IPv6Packet<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "[IPv6] {} → {}  Traffic Class: {}  Flow Label: {}  PayloadLen: {}  Next: {:?}  Hop Limit: {}  Payload: {:?}",
+            "[IPv6] {} → {} Traffic Class={} Flow Label={} Len={} Next={:?} Hop={} Payload={:?}",
             Self::fmt_ip(&self.source_address),
             Self::fmt_ip(&self.destination_address),
             self.traffic_class,

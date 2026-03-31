@@ -97,7 +97,7 @@ impl Display for TlsRecord<'_> {
                     v => TlsHandshakeType::Unknown(v),
                 };
 
-                return write!(f, "[TLSv{}] Handshake: {:?}", self.version, hs_type);
+                return write!(f, "[TLSv{}] Handshake={:?}", self.version, hs_type);
             }
             TlsContentType::ApplicationData => {
                 return write!(
@@ -115,7 +115,7 @@ impl Display for TlsRecord<'_> {
                 };
                 return write!(
                     f,
-                    "[TLSv{}] Alert — level: {}  code: {}",
+                    "[TLSv{}] Alert level={} code={}",
                     self.version, level, self.payload[1]
                 );
             }
