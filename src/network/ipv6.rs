@@ -95,16 +95,17 @@ impl IPv6Packet {
     }
 
     pub fn format_packet(count: u64, ts: timeval, packet: IPv6Packet) -> String {
-        if let Some(payload) = packet.payload {
+        if let Some(payload) = packet.to_owned().payload {
             match payload {
-                TransportPacket::TCP(tcp) => TcpSegment::format_packet(count, ts, tcp),
-                TransportPacket::UDP(udp) => UdpDatagram::format_packet(count, ts, udp),
-                TransportPacket::ICMP(icmp) => IcmpPacket::format_packet(count, ts, icmp),
-                TransportPacket::ICMPv6(icmpv6) => Icmpv6Packet::format_packet(count, ts, icmpv6),
+                TransportPacket::TCP(tcp) => return TcpSegment::format_packet(count, ts, tcp),
+                TransportPacket::UDP(udp) => return UdpDatagram::format_packet(count, ts, udp),
+                TransportPacket::ICMPv6(icmpv6) => {
+                    return Icmpv6Packet::format_packet(count, ts, icmpv6);
+                }
+                _ => (),
             }
-        } else {
-            format!("{count} {} {}", timeval_to_string(ts), packet.to_string())
         }
+        format!("{count} {} {}", timeval_to_string(ts), packet.to_string())
     }
 }
 
