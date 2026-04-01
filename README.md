@@ -70,5 +70,5 @@ RustShark currently supports the following protocols:
 RustShark will try to decode as many layers of the packet as possible, and will print out the decoded information in a human-readable format.
 There is also the option for a debug mode which will print out all info and hexidecimal data of the payload, for the last layer of the packet.
 
-As packets are captured, RustShark will also insert each packet into a `.pcap` file with the appropriate format and timestamp, allowing for later analysis using other tools such as Wireshark or tcpdump.
+As packets are captured, RustShark will also insert each packet into a `.pcap` file with the appropriate format (again, only tested for MacOS) and timestamp, allowing for later analysis using other tools such as Wireshark or tcpdump.
 _This is a very useful feature for debugging and testing, as it allows you to capture packets in real-time and then analyse them later using a more powerful tool._
