@@ -14,7 +14,7 @@ Furthermore, all developement is being done on MacOS, so there may be compatibil
 To use RustShark, you must first clone the repository and build the project using Cargo:
 
 ```zsh
-git clone https://github.com/PAdventures/RustShark.git &&
+git clone https://github.com/PAdventures/RustShark.git rustshark &&
 cd rustshark &&
 cargo build -r
 ```
@@ -24,6 +24,8 @@ Once the project is built, you can now run the packet sniffer using the followin
 ```zsh
 cargo run --release
 ```
+
+When you run this command, by default, RustShark will attempt to capture packets on the "en0" network interface (which is the default network interface on MacOS) and will print out the decoded information of each packet in real-time.
 
 For all options, run the following:
 
@@ -45,7 +47,7 @@ To capture packets with a specific filter (see [BPF filter](https://biot.com/cap
 cargo run --release -- --filter "tcp"
 ```
 
-To capture packets as soon as they arrive (instead of being buffered by the kernal), use the `-I` or `--immediate` option:
+To capture packets as soon as they arrive (instead of being buffered by the kernel), use the `-I` or `--immediate` option:
 
 ```zsh
 cargo run --release -- --immediate
@@ -68,7 +70,7 @@ RustShark currently supports the following protocols:
 - TLS
 
 RustShark will try to decode as many layers of the packet as possible, and will print out the decoded information in a human-readable format.
-There is also the option for a debug mode which will print out all info and hexidecimal data of the payload, for the last layer of the packet.
+There is also the option for a debug mode which will print out all info and hexadecimal data of the payload, for the last layer of the packet.
 
 As packets are captured, RustShark will also insert each packet into a `.pcap` file with the appropriate format (again, only tested for MacOS) and timestamp, allowing for later analysis using other tools such as Wireshark or tcpdump.
 _This is a very useful feature for debugging and testing, as it allows you to capture packets in real-time and then analyse them later using a more powerful tool._

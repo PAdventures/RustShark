@@ -2,6 +2,13 @@
 name = "rustshark"
 version = "0.1.0"
 edition = "2024"
+description = "RustShark is a Rust implementation of a packet sniffer, inspired by Wireshark. It allows you to capture and analyse network traffic in real-time, providing insights into the data being transmitted over the network."
+license = "MIT"
+authors = ["PAdventures <padventures.contact@gmail.com>"]
+repository = "https://github.com/PAdventures/RustShark"
+keywords = ["networking", "pcap", "packet-sniffer", "wireshark"]
+categories = ["network-programming", "command-line-utilities"]
+readme = "README.md"
 
 [dependencies]
 bytes = "1.11.1"
