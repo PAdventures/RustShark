@@ -1,0 +1,24 @@
+name: Bug Report
+description: Report an issue with the project
+labels: [Bug, Needs Review]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking the time to report a bug! Please fill out the following template with as much detail as possible to help us understand and resolve the issue.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Report description
+      description: Please provide a clear and concise description of the bug, including steps to reproduce it, expected behavior, and actual behavior.
+
+  - type: textarea
+    id: versions
+    attributes:
+      label: Versions
+      description: List necessary versions here
+      placeholder: |
+        - Rust: 1.91.1
+        - RustShark: 0.1.0
+        - Operating System: MacOS 24.4
