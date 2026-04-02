@@ -44,9 +44,7 @@ pub enum DnsType {
     NS,
     CNAME,
     SOA,
-    WKS,
     PTR,
-    HINFO,
     MX,
     TXT,
     AAAA,
@@ -61,6 +59,9 @@ impl DnsType {
             2 => DnsType::NS,
             5 => DnsType::CNAME,
             6 => DnsType::SOA,
+            12 => DnsType::PTR,
+            15 => DnsType::MX,
+            16 => DnsType::TXT,
             28 => DnsType::AAAA,
             65 => DnsType::HTTPS,
             v => DnsType::Unknown(v),
@@ -82,16 +83,7 @@ pub enum DnsRData {
         expire: u32,
         minimum: u32,
     },
-    WKS {
-        address: [u8; 4],
-        protocol: u8,
-        bitmap: Vec<u8>,
-    },
     PTR(String),
-    HINFO {
-        cpu: String,
-        os: String,
-    },
     MX {
         preference: u16,
         exchange: String,
@@ -226,41 +218,6 @@ impl DnsMessage {
                         expire,
                         minimum,
                     }
-                }
-                DnsType::WKS if rdlen >= 5 => {
-                    let address = rdata_bytes[0..4].try_into().unwrap();
-                    let protocol = rdata_bytes[4];
-                    let bitmap = rdata_bytes[5..].to_vec();
-                    DnsRData::WKS {
-                        address,
-                        protocol,
-                        bitmap,
-                    }
-                }
-                DnsType::HINFO => {
-                    let cpu_len = rdata_bytes[0] as usize;
-                    pos += 1;
-                    if pos + cpu_len > data.len() {
-                        return None;
-                    }
-                    let cpu = std::str::from_utf8(&data[pos..pos + cpu_len])
-                        .ok()?
-                        .to_string();
-                    pos += cpu_len;
-
-                    if pos >= data.len() {
-                        return None;
-                    }
-                    let os_len = rdata_bytes[cpu_len + 1] as usize;
-                    pos += 1;
-                    if pos + os_len > data.len() {
-                        return None;
-                    }
-                    let os = std::str::from_utf8(&data[pos..pos + os_len])
-                        .ok()?
-                        .to_string();
-
-                    DnsRData::HINFO { cpu, os }
                 }
                 DnsType::MX if rdlen >= 3 => {
                     let preference = u16::from_be_bytes([rdata_bytes[0], rdata_bytes[1]]);
@@ -442,17 +399,7 @@ impl Display for DnsRData {
             DnsRData::SOA { mname, .. } => write!(f, "{}", mname),
             DnsRData::NS(ns) => write!(f, "{}", ns),
             DnsRData::PTR(ptr) => write!(f, "{}", ptr),
-            DnsRData::HINFO { cpu, os } => write!(f, "{} {}", cpu, os),
             DnsRData::MX { exchange, .. } => write!(f, "{}", exchange),
-            DnsRData::WKS { address, .. } => write!(
-                f,
-                "{}",
-                address
-                    .iter()
-                    .map(|b| b.to_string())
-                    .collect::<Vec<_>>()
-                    .join("."),
-            ),
             DnsRData::TXT(txt) => write!(f, "{}", txt),
         }
     }
