@@ -66,9 +66,11 @@ impl DnsCache {
             .map(|e| e.hostname.clone())
     }
 
-    pub fn evict_expired(&mut self) {
+    pub fn evict_expired(&mut self) -> usize {
+        let current_len = self.len();
         self.ipv4.retain(|_, e| !e.is_expired());
         self.ipv6.retain(|_, e| !e.is_expired());
+        current_len - self.len()
     }
 
     pub fn len(&self) -> usize {

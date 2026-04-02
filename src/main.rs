@@ -98,9 +98,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             loop {
                 thread::sleep(Duration::from_secs(eviction_interval));
                 if let Ok(mut cache) = cache_for_eviction.write() {
-                    cache.evict_expired();
+                    let evicted = cache.evict_expired();
                     eprintln!(
-                        "[DNS Cache] Evicted expired entries, {} remaining",
+                        "[DNS Cache] Evicted {} expired entries, {} remaining",
+                        evicted,
                         cache.len()
                     );
                 }
