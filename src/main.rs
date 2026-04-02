@@ -53,6 +53,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .unwrap()
         .parse::<u64>()
         .unwrap_or(100);
+    let eviction_interval = matches
+        .get_one::<String>("eviction-interval")
+        .unwrap()
+        .parse::<u64>()
+        .unwrap_or(60);
 
     if debug_mode {
         println!("Debug mode is enabled")
@@ -91,7 +96,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         thread::spawn(move || {
             println!("[DNS Cache] Eviction thread started");
             loop {
-                thread::sleep(Duration::from_secs(60));
+                thread::sleep(Duration::from_secs(eviction_interval));
                 if let Ok(mut cache) = cache_for_eviction.write() {
                     cache.evict_expired();
                     eprintln!(

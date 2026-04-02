@@ -15,4 +15,5 @@ pub fn cmd() -> Command {
         )
         .arg(arg!(-p --"packet-count" <COUNT> ... "The number of packets to store before flushing to disk").default_value("100"))
         .arg(arg!(-f --filter <FILTER> ... "The BPF filter to apply to the capture").default_value(""))
+    .    arg(arg!(-e --"eviction-interval" <SECONDS> ... "Interval in seconds to evict expired DNS cache entries. Low values may impact performance and are not recommended").default_value("60"))
 }
