@@ -3,6 +3,7 @@ use bytes::Bytes;
 use crate::{
     application::{parse_tcp_application, parse_udp_application},
     network::ip_protocol::IpProtocol,
+    traits::Protocol,
 };
 
 pub mod icmp;

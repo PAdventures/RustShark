@@ -2,7 +2,10 @@ pub mod dns;
 pub mod http;
 pub mod tls;
 
-use crate::transport::{tcp::TcpSegment, udp::UdpDatagram};
+use crate::{
+    traits::Protocol,
+    transport::{tcp::TcpSegment, udp::UdpDatagram},
+};
 
 #[derive(Clone)]
 pub enum ApplicationMessage {

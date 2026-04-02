@@ -3,7 +3,7 @@ use std::fmt::{Debug, Display};
 use bytes::Bytes;
 use libc::timeval;
 
-use crate::utils::timeval_to_string;
+use crate::{traits::Protocol, utils::timeval_to_string};
 
 #[derive(Clone)]
 pub struct ArpPacket {
@@ -36,6 +36,22 @@ pub enum ArpOperation {
 }
 
 impl ArpPacket {
+    pub fn fmt_mac(mac: &[u8; 6]) -> String {
+        mac.iter()
+            .map(|b| format!("{b:02X}"))
+            .collect::<Vec<_>>()
+            .join(":")
+    }
+
+    pub fn fmt_ip(ip: &[u8; 4]) -> String {
+        ip.iter()
+            .map(|b| b.to_string())
+            .collect::<Vec<_>>()
+            .join(".")
+    }
+}
+
+impl Protocol for ArpPacket {
     /// ARP Packet (RFC 826)
     /// Total: 28 bytes for Ethernet + IPv4
     /// ```
@@ -57,7 +73,7 @@ impl ArpPacket {
     /// |                   Target Protocol Address                     |
     /// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
     /// ```
-    pub fn parse(data: Bytes) -> Option<Self> {
+    fn parse(data: Bytes) -> Option<Self> {
         if data.len() < 28 {
             return None;
         };
@@ -103,22 +119,8 @@ impl ArpPacket {
         })
     }
 
-    pub fn fmt_mac(mac: &[u8; 6]) -> String {
-        mac.iter()
-            .map(|b| format!("{b:02X}"))
-            .collect::<Vec<_>>()
-            .join(":")
-    }
-
-    pub fn fmt_ip(ip: &[u8; 4]) -> String {
-        ip.iter()
-            .map(|b| b.to_string())
-            .collect::<Vec<_>>()
-            .join(".")
-    }
-
-    pub fn format_packet(count: u64, ts: timeval, packet: ArpPacket) -> String {
-        format!("{count} {} {}", timeval_to_string(ts), packet.to_string())
+    fn format_protocol(count: u64, ts: timeval, protocol: Self) -> String {
+        format!("{count} {} {}", timeval_to_string(ts), protocol.to_string())
     }
 }
 

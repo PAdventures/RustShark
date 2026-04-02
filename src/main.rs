@@ -3,6 +3,7 @@ mod cli;
 mod link;
 mod network;
 mod pcap_writer;
+mod traits;
 mod transport;
 mod utils;
 
@@ -12,6 +13,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::network::NetworkPacket;
+use crate::traits::Protocol;
 use crate::{
     link::ethernet::{EtherType, EthernetFrame},
     network::arp::ArpPacket,
@@ -133,7 +135,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         println!(
             "{}",
-            EthernetFrame::format_frame(packet_count, packet.header.ts, ethernet)
+            EthernetFrame::format_protocol(packet_count, packet.header.ts, ethernet)
         );
     }
 

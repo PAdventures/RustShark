@@ -5,6 +5,7 @@ use libc::timeval;
 
 use crate::{
     application::{ApplicationMessage, dns::DnsMessage, http::HttpMessage, tls::TlsRecord},
+    traits::Protocol,
     utils::timeval_to_string,
 };
 
@@ -18,7 +19,7 @@ pub struct UdpDatagram {
     pub raw_payload: Bytes,
 }
 
-impl UdpDatagram {
+impl Protocol for UdpDatagram {
     /// UDP header (RFC 768) — fixed 8 bytes:
     ///  0               1               2               3
     ///  0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7
@@ -27,7 +28,7 @@ impl UdpDatagram {
     /// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
     /// |             Length            |           Checksum            |
     /// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-    pub fn parse(data: Bytes) -> Option<Self> {
+    fn parse(data: Bytes) -> Option<Self> {
         if data.len() < 8 {
             return None;
         }
@@ -46,15 +47,15 @@ impl UdpDatagram {
         })
     }
 
-    pub fn format_packet(count: u64, ts: timeval, datagram: UdpDatagram) -> String {
-        if let Some(payload) = datagram.payload {
+    fn format_protocol(count: u64, ts: timeval, protocol: UdpDatagram) -> String {
+        if let Some(payload) = protocol.payload {
             match payload {
-                ApplicationMessage::HTTP(http) => HttpMessage::format_packet(count, ts, http),
-                ApplicationMessage::DNS(dns) => DnsMessage::format_packet(count, ts, dns),
-                ApplicationMessage::TLS(tls) => TlsRecord::format_packet(count, ts, tls),
+                ApplicationMessage::HTTP(http) => HttpMessage::format_protocol(count, ts, http),
+                ApplicationMessage::DNS(dns) => DnsMessage::format_protocol(count, ts, dns),
+                ApplicationMessage::TLS(tls) => TlsRecord::format_protocol(count, ts, tls),
             }
         } else {
-            format!("{count} {} {}", timeval_to_string(ts), datagram.to_string())
+            format!("{count} {} {}", timeval_to_string(ts), protocol.to_string())
         }
     }
 }

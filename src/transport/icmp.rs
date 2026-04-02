@@ -3,7 +3,7 @@ use std::fmt::Display;
 use bytes::Bytes;
 use libc::timeval;
 
-use crate::utils::timeval_to_string;
+use crate::{traits::Protocol, utils::timeval_to_string};
 
 #[derive(Debug, Clone)]
 pub struct IcmpPacket {
@@ -50,8 +50,8 @@ impl IcmpType {
     }
 }
 
-impl IcmpPacket {
-    pub fn parse(data: Bytes) -> Option<Self> {
+impl Protocol for IcmpPacket {
+    fn parse(data: Bytes) -> Option<Self> {
         if data.len() < 4 {
             return None;
         }
@@ -68,8 +68,8 @@ impl IcmpPacket {
         })
     }
 
-    pub fn format_packet(count: u64, ts: timeval, packet: IcmpPacket) -> String {
-        format!("{count} {} {}", timeval_to_string(ts), packet.to_string())
+    fn format_protocol(count: u64, ts: timeval, protocol: IcmpPacket) -> String {
+        format!("{count} {} {}", timeval_to_string(ts), protocol.to_string())
     }
 }
 

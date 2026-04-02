@@ -5,6 +5,7 @@ use libc::timeval;
 
 use crate::{
     network::ip_protocol::IpProtocol,
+    traits::Protocol,
     transport::{
         TransportPacket, icmp::IcmpPacket, igmp::IgmpMessage, tcp::TcpSegment, udp::UdpDatagram,
     },
@@ -30,6 +31,29 @@ pub struct IPv4Packet {
 }
 
 impl IPv4Packet {
+    pub fn fmt_ip(ip: &[u8; 4]) -> String {
+        ip.iter()
+            .map(|b| b.to_string())
+            .collect::<Vec<_>>()
+            .join(".")
+    }
+
+    /// RFC 1071 one's complement checksum verification
+    pub fn verify_checksum(data: Bytes) -> bool {
+        let ihl = ((data[0] & 0xF) as usize) * 4;
+        let mut sum: u32 = 0;
+        for i in (0..ihl).step_by(2) {
+            let word = u16::from_be_bytes([data[i], data[i + 1]]);
+            sum += word as u32;
+        }
+        while sum >> 16 != 0 {
+            sum = (sum & 0xFFFF) + (sum >> 16);
+        }
+        sum == 0xFFFF
+    }
+}
+
+impl Protocol for IPv4Packet {
     /// IPv4 header (RFC 791):
     /// ```
     ///  0               1               2               3
@@ -46,7 +70,7 @@ impl IPv4Packet {
     /// |                      Destination Address                      |
     /// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
     /// ```
-    pub fn parse(data: Bytes) -> Option<Self> {
+    fn parse(data: Bytes) -> Option<Self> {
         if data.len() < 20 {
             return None;
         }
@@ -93,39 +117,20 @@ impl IPv4Packet {
         })
     }
 
-    pub fn fmt_ip(ip: &[u8; 4]) -> String {
-        ip.iter()
-            .map(|b| b.to_string())
-            .collect::<Vec<_>>()
-            .join(".")
-    }
-
-    /// RFC 1071 one's complement checksum verification
-    pub fn verify_checksum(data: Bytes) -> bool {
-        let ihl = ((data[0] & 0xF) as usize) * 4;
-        let mut sum: u32 = 0;
-        for i in (0..ihl).step_by(2) {
-            let word = u16::from_be_bytes([data[i], data[i + 1]]);
-            sum += word as u32;
-        }
-        while sum >> 16 != 0 {
-            sum = (sum & 0xFFFF) + (sum >> 16);
-        }
-        sum == 0xFFFF
-    }
-
-    pub fn format_packet(count: u64, ts: timeval, packet: IPv4Packet) -> String {
-        if let Some(payload) = packet.to_owned().payload {
+    fn format_protocol(count: u64, ts: timeval, protocol: Self) -> String {
+        if let Some(payload) = protocol.to_owned().payload {
             match payload {
-                TransportPacket::TCP(tcp) => return TcpSegment::format_packet(count, ts, tcp),
-                TransportPacket::UDP(udp) => return UdpDatagram::format_packet(count, ts, udp),
-                TransportPacket::ICMP(icmp) => return IcmpPacket::format_packet(count, ts, icmp),
-                TransportPacket::IGMP(igmp) => return IgmpMessage::format_packet(count, ts, igmp),
+                TransportPacket::TCP(tcp) => return TcpSegment::format_protocol(count, ts, tcp),
+                TransportPacket::UDP(udp) => return UdpDatagram::format_protocol(count, ts, udp),
+                TransportPacket::ICMP(icmp) => return IcmpPacket::format_protocol(count, ts, icmp),
+                TransportPacket::IGMP(igmp) => {
+                    return IgmpMessage::format_protocol(count, ts, igmp);
+                }
                 _ => (),
             }
         }
 
-        format!("{count} {} {}", timeval_to_string(ts), packet.to_string())
+        format!("{count} {} {}", timeval_to_string(ts), protocol.to_string())
     }
 }
 

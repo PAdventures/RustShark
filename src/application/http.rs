@@ -3,7 +3,7 @@ use std::fmt::Display;
 use bytes::Bytes;
 use libc::timeval;
 
-use crate::utils::timeval_to_string;
+use crate::{traits::Protocol, utils::timeval_to_string};
 
 #[derive(Clone)]
 pub enum HttpMessage {
@@ -29,8 +29,8 @@ pub struct HttpResponse {
     pub body: Bytes,
 }
 
-impl HttpMessage {
-    pub fn parse(data: Bytes) -> Option<Self> {
+impl Protocol for HttpMessage {
+    fn parse(data: Bytes) -> Option<Self> {
         let text = String::from_utf8_lossy(&data);
 
         let (header, _) = text.split_once("\r\n\r\n")?;
@@ -76,8 +76,8 @@ impl HttpMessage {
         }
     }
 
-    pub fn format_packet(count: u64, ts: timeval, message: HttpMessage) -> String {
-        format!("{count} {} {}", timeval_to_string(ts), message.to_string())
+    fn format_protocol(count: u64, ts: timeval, protocol: HttpMessage) -> String {
+        format!("{count} {} {}", timeval_to_string(ts), protocol.to_string())
     }
 }
 

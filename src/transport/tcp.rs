@@ -5,6 +5,7 @@ use libc::timeval;
 
 use crate::{
     application::{ApplicationMessage, dns::DnsMessage, http::HttpMessage, tls::TlsRecord},
+    traits::Protocol,
     utils::timeval_to_string,
 };
 
@@ -81,7 +82,7 @@ impl Display for TcpFlags {
     }
 }
 
-impl TcpSegment {
+impl Protocol for TcpSegment {
     /// TCP header (RFC 9293):
     /// ```
     ///  0               1               2               3
@@ -100,7 +101,7 @@ impl TcpSegment {
     /// |           Checksum            |         Urgent Pointer        |
     /// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
     /// ```
-    pub fn parse(data: Bytes) -> Option<Self> {
+    fn parse(data: Bytes) -> Option<Self> {
         if data.len() < 20 {
             return None;
         };
@@ -135,15 +136,15 @@ impl TcpSegment {
         })
     }
 
-    pub fn format_packet(count: u64, ts: timeval, segment: TcpSegment) -> String {
-        if let Some(payload) = segment.payload {
+    fn format_protocol(count: u64, ts: timeval, protocol: TcpSegment) -> String {
+        if let Some(payload) = protocol.payload {
             match payload {
-                ApplicationMessage::HTTP(http) => HttpMessage::format_packet(count, ts, http),
-                ApplicationMessage::DNS(dns) => DnsMessage::format_packet(count, ts, dns),
-                ApplicationMessage::TLS(tls) => TlsRecord::format_packet(count, ts, tls),
+                ApplicationMessage::HTTP(http) => HttpMessage::format_protocol(count, ts, http),
+                ApplicationMessage::DNS(dns) => DnsMessage::format_protocol(count, ts, dns),
+                ApplicationMessage::TLS(tls) => TlsRecord::format_protocol(count, ts, tls),
             }
         } else {
-            format!("{count} {} {}", timeval_to_string(ts), segment.to_string())
+            format!("{count} {} {}", timeval_to_string(ts), protocol.to_string())
         }
     }
 }

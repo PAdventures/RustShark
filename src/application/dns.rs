@@ -3,7 +3,7 @@ use std::fmt::Display;
 use bytes::Bytes;
 use libc::timeval;
 
-use crate::utils::timeval_to_string;
+use crate::{traits::Protocol, utils::timeval_to_string};
 
 #[derive(Debug, Clone)]
 pub struct DnsMessage {
@@ -136,8 +136,8 @@ fn parse_name(data: &[u8], mut pos: usize) -> Option<(String, usize)> {
     Some((name, end_pos))
 }
 
-impl DnsMessage {
-    pub fn parse(data: Bytes) -> Option<Self> {
+impl Protocol for DnsMessage {
+    fn parse(data: Bytes) -> Option<Self> {
         fn parse_responses(data: &[u8], mut pos: usize) -> Option<DnsAnswer> {
             let Some((name, next_pos)) = parse_name(data, pos) else {
                 return None;
@@ -324,8 +324,8 @@ impl DnsMessage {
         })
     }
 
-    pub fn format_packet(count: u64, ts: timeval, message: DnsMessage) -> String {
-        format!("{count} {} {}", timeval_to_string(ts), message.to_string())
+    fn format_protocol(count: u64, ts: timeval, protocol: DnsMessage) -> String {
+        format!("{count} {} {}", timeval_to_string(ts), protocol.to_string())
     }
 }
 

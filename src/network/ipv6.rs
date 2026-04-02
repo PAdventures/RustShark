@@ -5,6 +5,7 @@ use libc::timeval;
 
 use crate::{
     network::ip_protocol::IpProtocol,
+    traits::Protocol,
     transport::{TransportPacket, icmpv6::Icmpv6Packet, tcp::TcpSegment, udp::UdpDatagram},
     utils::timeval_to_string,
 };
@@ -23,6 +24,17 @@ pub struct IPv6Packet {
 }
 
 impl IPv6Packet {
+    pub fn fmt_ip(ip: &[u8; 16]) -> String {
+        // Condense to standard colon-hex notation
+        let groups: Vec<String> = ip
+            .chunks(2)
+            .map(|c| format!("{:02x}{:02x}", c[0], c[1]))
+            .collect();
+        groups.join(":")
+    }
+}
+
+impl Protocol for IPv6Packet {
     /// IPv6 fixed header (RFC 8200) is always 40 bytes:
     /// ```
     ///  0               1               2               3
@@ -39,7 +51,7 @@ impl IPv6Packet {
     /// |                          (128 bits)                           |
     /// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
     /// ```
-    pub fn parse(data: Bytes) -> Option<Self> {
+    fn parse(data: Bytes) -> Option<Self> {
         if data.len() < 40 {
             return None;
         }
@@ -83,27 +95,18 @@ impl IPv6Packet {
         })
     }
 
-    pub fn fmt_ip(ip: &[u8; 16]) -> String {
-        // Condense to standard colon-hex notation
-        let groups: Vec<String> = ip
-            .chunks(2)
-            .map(|c| format!("{:02x}{:02x}", c[0], c[1]))
-            .collect();
-        groups.join(":")
-    }
-
-    pub fn format_packet(count: u64, ts: timeval, packet: IPv6Packet) -> String {
-        if let Some(payload) = packet.to_owned().payload {
+    fn format_protocol(count: u64, ts: timeval, protocol: Self) -> String {
+        if let Some(payload) = protocol.to_owned().payload {
             match payload {
-                TransportPacket::TCP(tcp) => return TcpSegment::format_packet(count, ts, tcp),
-                TransportPacket::UDP(udp) => return UdpDatagram::format_packet(count, ts, udp),
+                TransportPacket::TCP(tcp) => return TcpSegment::format_protocol(count, ts, tcp),
+                TransportPacket::UDP(udp) => return UdpDatagram::format_protocol(count, ts, udp),
                 TransportPacket::ICMPv6(icmpv6) => {
-                    return Icmpv6Packet::format_packet(count, ts, icmpv6);
+                    return Icmpv6Packet::format_protocol(count, ts, icmpv6);
                 }
                 _ => (),
             }
         }
-        format!("{count} {} {}", timeval_to_string(ts), packet.to_string())
+        format!("{count} {} {}", timeval_to_string(ts), protocol.to_string())
     }
 }
 
