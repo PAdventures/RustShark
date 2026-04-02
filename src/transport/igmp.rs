@@ -1,9 +1,8 @@
 use std::fmt::Display;
 
 use bytes::Bytes;
-use libc::timeval;
 
-use crate::utils::timeval_to_string;
+use crate::{traits::Protocol, utils};
 
 #[derive(Clone)]
 pub enum IgmpMessage {
@@ -44,8 +43,8 @@ impl Display for IgmpVersion {
     }
 }
 
-impl IgmpMessage {
-    pub fn parse(data: Bytes) -> Option<Self> {
+impl Protocol for IgmpMessage {
+    fn parse(data: Bytes) -> Option<Self> {
         if data.len() < 8 {
             return None;
         };
@@ -96,15 +95,8 @@ impl IgmpMessage {
         }
     }
 
-    pub fn fmt_ip(ip: &[u8; 4]) -> String {
-        ip.iter()
-            .map(|b| b.to_string())
-            .collect::<Vec<_>>()
-            .join(".")
-    }
-
-    pub fn format_packet(count: u64, ts: timeval, message: IgmpMessage) -> String {
-        format!("{count} {} {}", timeval_to_string(ts), message.to_string())
+    fn format_protocol(protocol: Self) -> String {
+        protocol.to_string()
     }
 }
 
@@ -115,7 +107,7 @@ impl Display for IgmpMessage {
                 f,
                 "[IGMP{}] Membership Report group {}",
                 version,
-                Self::fmt_ip(group)
+                utils::format_ipv4(group)
             ),
             Self::GeneralQuery { version, .. } => {
                 write!(f, "[IGMP{}] Membership Query, general", version)
@@ -125,13 +117,13 @@ impl Display for IgmpMessage {
                 f,
                 "[IGMP{}] Membership Query, specific for group {}",
                 version,
-                Self::fmt_ip(group)
+                utils::format_ipv4(group)
             ),
             Self::Leave { group, .. } => write!(
                 f,
                 "[IGMPv2] Leave Group {}, specific for group {}",
-                Self::fmt_ip(group),
-                Self::fmt_ip(group)
+                utils::format_ipv4(group),
+                utils::format_ipv4(group)
             ),
         }
     }

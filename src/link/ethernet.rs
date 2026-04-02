@@ -1,11 +1,11 @@
 use std::fmt::{Debug, Display};
 
 use bytes::Bytes;
-use libc::timeval;
 
 use crate::{
     network::{NetworkPacket, arp::ArpPacket, ipv4::IPv4Packet, ipv6::IPv6Packet},
-    utils::timeval_to_string,
+    traits::Protocol,
+    utils,
 };
 
 #[derive(Clone)]
@@ -25,11 +25,11 @@ pub enum EtherType {
     Unknown(u16),
 }
 
-impl EthernetFrame {
+impl Protocol for EthernetFrame {
     /// Ethernet Type II frame:
     ///
     /// 6 dst MAC | 6 src MAC | 2 EtherType
-    pub fn parse(data: Bytes) -> Option<Self> {
+    fn parse(data: Bytes) -> Option<Self> {
         if data.len() < 14 {
             return None;
         }
@@ -52,22 +52,15 @@ impl EthernetFrame {
         })
     }
 
-    pub fn format_mac(mac: &[u8; 6]) -> String {
-        mac.iter()
-            .map(|b| format!("{b:02X}"))
-            .collect::<Vec<_>>()
-            .join(":")
-    }
-
-    pub fn format_frame(count: u64, ts: timeval, frame: EthernetFrame) -> String {
-        if let Some(payload) = frame.payload {
+    fn format_protocol(protocol: Self) -> String {
+        if let Some(payload) = protocol.payload {
             match payload {
-                NetworkPacket::IPv4(ipv4) => IPv4Packet::format_packet(count, ts, ipv4),
-                NetworkPacket::IPv6(ipv6) => IPv6Packet::format_packet(count, ts, ipv6),
-                NetworkPacket::ARP(arp) => ArpPacket::format_packet(count, ts, arp),
+                NetworkPacket::IPv4(ipv4) => IPv4Packet::format_protocol(ipv4),
+                NetworkPacket::IPv6(ipv6) => IPv6Packet::format_protocol(ipv6),
+                NetworkPacket::ARP(arp) => ArpPacket::format_protocol(arp),
             }
         } else {
-            format!("{count} {} {}", timeval_to_string(ts), frame.to_string())
+            protocol.to_string()
         }
     }
 }
@@ -77,8 +70,8 @@ impl Display for EthernetFrame {
         write!(
             f,
             "[Ethernet II] {} -> {} Type={:?}",
-            Self::format_mac(&self.source_mac),
-            Self::format_mac(&self.destination_mac),
+            utils::format_mac(&self.source_mac),
+            utils::format_mac(&self.destination_mac),
             self.ether_type
         )
     }
@@ -89,8 +82,8 @@ impl Debug for EthernetFrame {
         write!(
             f,
             "[Ethernet II] {} -> {} Type={:?} Payload={:?}",
-            Self::format_mac(&self.source_mac),
-            Self::format_mac(&self.destination_mac),
+            utils::format_mac(&self.source_mac),
+            utils::format_mac(&self.destination_mac),
             self.ether_type,
             self.raw_payload
         )

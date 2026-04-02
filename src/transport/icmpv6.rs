@@ -1,9 +1,8 @@
 use std::fmt::Display;
 
 use bytes::Bytes;
-use libc::timeval;
 
-use crate::utils::timeval_to_string;
+use crate::traits::Protocol;
 
 #[derive(Debug, Clone)]
 pub struct Icmpv6Packet {
@@ -90,8 +89,8 @@ impl Icmpv6Type {
     }
 }
 
-impl Icmpv6Packet {
-    pub fn parse(data: Bytes) -> Option<Self> {
+impl Protocol for Icmpv6Packet {
+    fn parse(data: Bytes) -> Option<Self> {
         if data.len() < 4 {
             return None;
         }
@@ -108,8 +107,8 @@ impl Icmpv6Packet {
         })
     }
 
-    pub fn format_packet(count: u64, ts: timeval, packet: Icmpv6Packet) -> String {
-        format!("{count} {} {}", timeval_to_string(ts), packet.to_string())
+    fn format_protocol(protocol: Icmpv6Packet) -> String {
+        protocol.to_string()
     }
 }
 

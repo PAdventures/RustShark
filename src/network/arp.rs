@@ -1,9 +1,8 @@
 use std::fmt::{Debug, Display};
 
 use bytes::Bytes;
-use libc::timeval;
 
-use crate::utils::timeval_to_string;
+use crate::{traits::Protocol, utils};
 
 #[derive(Clone)]
 pub struct ArpPacket {
@@ -35,7 +34,7 @@ pub enum ArpOperation {
     Unknown(u16),
 }
 
-impl ArpPacket {
+impl Protocol for ArpPacket {
     /// ARP Packet (RFC 826)
     /// Total: 28 bytes for Ethernet + IPv4
     /// ```
@@ -57,7 +56,7 @@ impl ArpPacket {
     /// |                   Target Protocol Address                     |
     /// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
     /// ```
-    pub fn parse(data: Bytes) -> Option<Self> {
+    fn parse(data: Bytes) -> Option<Self> {
         if data.len() < 28 {
             return None;
         };
@@ -103,22 +102,8 @@ impl ArpPacket {
         })
     }
 
-    pub fn fmt_mac(mac: &[u8; 6]) -> String {
-        mac.iter()
-            .map(|b| format!("{b:02X}"))
-            .collect::<Vec<_>>()
-            .join(":")
-    }
-
-    pub fn fmt_ip(ip: &[u8; 4]) -> String {
-        ip.iter()
-            .map(|b| b.to_string())
-            .collect::<Vec<_>>()
-            .join(".")
-    }
-
-    pub fn format_packet(count: u64, ts: timeval, packet: ArpPacket) -> String {
-        format!("{count} {} {}", timeval_to_string(ts), packet.to_string())
+    fn format_protocol(protocol: Self) -> String {
+        protocol.to_string()
     }
 }
 
@@ -128,17 +113,17 @@ impl Display for ArpPacket {
             ArpOperation::Request => write!(
                 f,
                 "[ARP] Request - Who has {}? Tell {} ({})",
-                Self::fmt_ip(&self.target_protocol_address),
-                Self::fmt_ip(&self.sender_protocol_address),
-                Self::fmt_mac(&self.sender_hardware_address)
+                utils::format_ipv4(&self.target_protocol_address),
+                utils::format_ipv4(&self.sender_protocol_address),
+                utils::format_mac(&self.sender_hardware_address)
             ),
             ArpOperation::Reply => write!(
                 f,
                 "[ARP] Reply - {} is at {} (target: {} {})",
-                Self::fmt_ip(&self.sender_protocol_address),
-                Self::fmt_mac(&self.sender_hardware_address),
-                Self::fmt_ip(&self.target_protocol_address),
-                Self::fmt_mac(&self.target_hardware_address)
+                utils::format_ipv4(&self.sender_protocol_address),
+                utils::format_mac(&self.sender_hardware_address),
+                utils::format_ipv4(&self.target_protocol_address),
+                utils::format_mac(&self.target_hardware_address)
             ),
             ArpOperation::Unknown(op) => write!(f, "[ARP] Unknown operation {op:#06X}"),
         }
@@ -155,10 +140,10 @@ impl Debug for ArpPacket {
             self.hardware_length,
             self.protocol_length,
             self.operation,
-            Self::fmt_mac(&self.sender_hardware_address),
-            Self::fmt_ip(&self.sender_protocol_address),
-            Self::fmt_mac(&self.target_hardware_address),
-            Self::fmt_ip(&self.target_protocol_address)
+            utils::format_mac(&self.sender_hardware_address),
+            utils::format_ipv4(&self.sender_protocol_address),
+            utils::format_mac(&self.target_hardware_address),
+            utils::format_ipv4(&self.target_protocol_address)
         )
     }
 }

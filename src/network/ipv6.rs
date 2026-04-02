@@ -1,14 +1,12 @@
 use std::fmt::{Debug, Display};
 
 use bytes::Bytes;
-use libc::timeval;
 
 use crate::{
     network::ip_protocol::IpProtocol,
-    transport::{
-        TransportPacket, icmp::IcmpPacket, icmpv6::Icmpv6Packet, tcp::TcpSegment, udp::UdpDatagram,
-    },
-    utils::timeval_to_string,
+    traits::Protocol,
+    transport::{TransportPacket, icmpv6::Icmpv6Packet, tcp::TcpSegment, udp::UdpDatagram},
+    utils,
 };
 
 #[derive(Clone)]
@@ -24,7 +22,7 @@ pub struct IPv6Packet {
     pub raw_payload: Bytes,
 }
 
-impl IPv6Packet {
+impl Protocol for IPv6Packet {
     /// IPv6 fixed header (RFC 8200) is always 40 bytes:
     /// ```
     ///  0               1               2               3
@@ -41,7 +39,7 @@ impl IPv6Packet {
     /// |                          (128 bits)                           |
     /// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
     /// ```
-    pub fn parse(data: Bytes) -> Option<Self> {
+    fn parse(data: Bytes) -> Option<Self> {
         if data.len() < 40 {
             return None;
         }
@@ -85,27 +83,18 @@ impl IPv6Packet {
         })
     }
 
-    pub fn fmt_ip(ip: &[u8; 16]) -> String {
-        // Condense to standard colon-hex notation
-        let groups: Vec<String> = ip
-            .chunks(2)
-            .map(|c| format!("{:02x}{:02x}", c[0], c[1]))
-            .collect();
-        groups.join(":")
-    }
-
-    pub fn format_packet(count: u64, ts: timeval, packet: IPv6Packet) -> String {
-        if let Some(payload) = packet.to_owned().payload {
+    fn format_protocol(protocol: Self) -> String {
+        if let Some(payload) = protocol.to_owned().payload {
             match payload {
-                TransportPacket::TCP(tcp) => return TcpSegment::format_packet(count, ts, tcp),
-                TransportPacket::UDP(udp) => return UdpDatagram::format_packet(count, ts, udp),
+                TransportPacket::TCP(tcp) => return TcpSegment::format_protocol(tcp),
+                TransportPacket::UDP(udp) => return UdpDatagram::format_protocol(udp),
                 TransportPacket::ICMPv6(icmpv6) => {
-                    return Icmpv6Packet::format_packet(count, ts, icmpv6);
+                    return Icmpv6Packet::format_protocol(icmpv6);
                 }
                 _ => (),
             }
         }
-        format!("{count} {} {}", timeval_to_string(ts), packet.to_string())
+        protocol.to_string()
     }
 }
 
@@ -114,8 +103,8 @@ impl Display for IPv6Packet {
         write!(
             f,
             "[IPv6] {} → {} Hop={} Next={:?} Len={}",
-            Self::fmt_ip(&self.source_address),
-            Self::fmt_ip(&self.destination_address),
+            utils::format_ipv6(&self.source_address),
+            utils::format_ipv6(&self.destination_address),
             self.hop_limit,
             self.next_header,
             self.payload_length
@@ -128,8 +117,8 @@ impl Debug for IPv6Packet {
         write!(
             f,
             "[IPv6] {} → {} Traffic Class={} Flow Label={} Len={} Next={:?} Hop={} Payload={:?}",
-            Self::fmt_ip(&self.source_address),
-            Self::fmt_ip(&self.destination_address),
+            utils::format_ipv6(&self.source_address),
+            utils::format_ipv6(&self.destination_address),
             self.traffic_class,
             self.flow_label,
             self.payload_length,

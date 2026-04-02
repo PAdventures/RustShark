@@ -1,9 +1,8 @@
 use std::fmt::Display;
 
 use bytes::Bytes;
-use libc::timeval;
 
-use crate::utils::timeval_to_string;
+use crate::{dns_cache::SharedDnsCache, traits::Protocol, utils};
 
 #[derive(Debug, Clone)]
 pub struct DnsMessage {
@@ -44,9 +43,7 @@ pub enum DnsType {
     NS,
     CNAME,
     SOA,
-    WKS,
     PTR,
-    HINFO,
     MX,
     TXT,
     AAAA,
@@ -61,6 +58,9 @@ impl DnsType {
             2 => DnsType::NS,
             5 => DnsType::CNAME,
             6 => DnsType::SOA,
+            12 => DnsType::PTR,
+            15 => DnsType::MX,
+            16 => DnsType::TXT,
             28 => DnsType::AAAA,
             65 => DnsType::HTTPS,
             v => DnsType::Unknown(v),
@@ -82,16 +82,7 @@ pub enum DnsRData {
         expire: u32,
         minimum: u32,
     },
-    WKS {
-        address: [u8; 4],
-        protocol: u8,
-        bitmap: Vec<u8>,
-    },
     PTR(String),
-    HINFO {
-        cpu: String,
-        os: String,
-    },
     MX {
         preference: u16,
         exchange: String,
@@ -99,6 +90,33 @@ pub enum DnsRData {
     TXT(String),
     AAAA([u8; 16]),
     Raw(Vec<u8>),
+}
+
+impl DnsMessage {
+    pub fn populate_cache(&self, cache: &SharedDnsCache) {
+        if !self.is_response {
+            return;
+        }
+
+        let hostname = match self.questions.first() {
+            Some(q) => q.name.clone(),
+            None => return,
+        };
+
+        let Ok(mut cache) = cache.write() else { return };
+
+        for answer in &self.answers {
+            match &answer.rdata {
+                DnsRData::A(ip) => {
+                    cache.insert_a(*ip, hostname.clone(), answer.ttl);
+                }
+                DnsRData::AAAA(ip) => {
+                    cache.insert_aaaa(*ip, hostname.clone(), answer.ttl);
+                }
+                _ => {}
+            }
+        }
+    }
 }
 
 fn parse_name(data: &[u8], mut pos: usize) -> Option<(String, usize)> {
@@ -144,8 +162,8 @@ fn parse_name(data: &[u8], mut pos: usize) -> Option<(String, usize)> {
     Some((name, end_pos))
 }
 
-impl DnsMessage {
-    pub fn parse(data: Bytes) -> Option<Self> {
+impl Protocol for DnsMessage {
+    fn parse(data: Bytes) -> Option<Self> {
         fn parse_responses(data: &[u8], mut pos: usize) -> Option<DnsAnswer> {
             let Some((name, next_pos)) = parse_name(data, pos) else {
                 return None;
@@ -226,41 +244,6 @@ impl DnsMessage {
                         expire,
                         minimum,
                     }
-                }
-                DnsType::WKS if rdlen >= 5 => {
-                    let address = rdata_bytes[0..4].try_into().unwrap();
-                    let protocol = rdata_bytes[4];
-                    let bitmap = rdata_bytes[5..].to_vec();
-                    DnsRData::WKS {
-                        address,
-                        protocol,
-                        bitmap,
-                    }
-                }
-                DnsType::HINFO => {
-                    let cpu_len = rdata_bytes[0] as usize;
-                    pos += 1;
-                    if pos + cpu_len > data.len() {
-                        return None;
-                    }
-                    let cpu = std::str::from_utf8(&data[pos..pos + cpu_len])
-                        .ok()?
-                        .to_string();
-                    pos += cpu_len;
-
-                    if pos >= data.len() {
-                        return None;
-                    }
-                    let os_len = rdata_bytes[cpu_len + 1] as usize;
-                    pos += 1;
-                    if pos + os_len > data.len() {
-                        return None;
-                    }
-                    let os = std::str::from_utf8(&data[pos..pos + os_len])
-                        .ok()?
-                        .to_string();
-
-                    DnsRData::HINFO { cpu, os }
                 }
                 DnsType::MX if rdlen >= 3 => {
                     let preference = u16::from_be_bytes([rdata_bytes[0], rdata_bytes[1]]);
@@ -367,8 +350,8 @@ impl DnsMessage {
         })
     }
 
-    pub fn format_packet(count: u64, ts: timeval, message: DnsMessage) -> String {
-        format!("{count} {} {}", timeval_to_string(ts), message.to_string())
+    fn format_protocol(protocol: DnsMessage) -> String {
+        protocol.to_string()
     }
 }
 
@@ -410,49 +393,14 @@ impl Display for DnsMessage {
 impl Display for DnsRData {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            DnsRData::A(ip) => write!(
-                f,
-                "{}",
-                ip.iter()
-                    .map(|b| b.to_string())
-                    .collect::<Vec<_>>()
-                    .join(".")
-            ),
-            DnsRData::AAAA(ip) => write!(
-                f,
-                "{}",
-                ip.iter()
-                    .map(|b| format!("{b:02x}"))
-                    .collect::<Vec<_>>()
-                    .chunks(2)
-                    .map(|c| c.join(""))
-                    .collect::<Vec<_>>()
-                    .join(":")
-            ),
+            DnsRData::A(ip) => write!(f, "{}", utils::format_ipv4(ip)),
+            DnsRData::AAAA(ip) => write!(f, "{}", utils::format_ipv6(ip)),
             DnsRData::CName(name) => write!(f, "{}", name),
-            DnsRData::Raw(bytes) => write!(
-                f,
-                "0x{}",
-                bytes
-                    .iter()
-                    .map(|b| format!("{b:02x}"))
-                    .collect::<Vec<_>>()
-                    .join("")
-            ),
+            DnsRData::Raw(bytes) => write!(f, "0x{}", utils::format_bytes(bytes)),
             DnsRData::SOA { mname, .. } => write!(f, "{}", mname),
             DnsRData::NS(ns) => write!(f, "{}", ns),
             DnsRData::PTR(ptr) => write!(f, "{}", ptr),
-            DnsRData::HINFO { cpu, os } => write!(f, "{} {}", cpu, os),
             DnsRData::MX { exchange, .. } => write!(f, "{}", exchange),
-            DnsRData::WKS { address, .. } => write!(
-                f,
-                "{}",
-                address
-                    .iter()
-                    .map(|b| b.to_string())
-                    .collect::<Vec<_>>()
-                    .join("."),
-            ),
             DnsRData::TXT(txt) => write!(f, "{}", txt),
         }
     }
