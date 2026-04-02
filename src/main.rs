@@ -44,7 +44,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let debug_mode = matches.get_flag("debug");
     let immediate_mode = matches.get_flag("immediate");
     let no_resolve = matches.get_flag("no-resolve");
-    let no_address = matches.get_flag("no-address");
+    let address = matches.get_flag("address");
     let interface = matches.get_one::<String>("interface").unwrap();
     let output_file = matches.get_one::<String>("output").unwrap();
     let filter = matches.get_one::<String>("filter").unwrap();
@@ -173,7 +173,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
 
-        if no_address {
+        if !address {
             println!(
                 "{packet_count} {} {}",
                 timeval_to_string(packet.header.ts),
