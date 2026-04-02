@@ -6,7 +6,7 @@ use libc::timeval;
 use crate::{
     network::{NetworkPacket, arp::ArpPacket, ipv4::IPv4Packet, ipv6::IPv6Packet},
     traits::Protocol,
-    utils::timeval_to_string,
+    utils::{self, timeval_to_string},
 };
 
 #[derive(Clone)]
@@ -24,15 +24,6 @@ pub enum EtherType {
     IPv6,
     ARP,
     Unknown(u16),
-}
-
-impl EthernetFrame {
-    pub fn format_mac(mac: &[u8; 6]) -> String {
-        mac.iter()
-            .map(|b| format!("{b:02X}"))
-            .collect::<Vec<_>>()
-            .join(":")
-    }
 }
 
 impl Protocol for EthernetFrame {
@@ -80,8 +71,8 @@ impl Display for EthernetFrame {
         write!(
             f,
             "[Ethernet II] {} -> {} Type={:?}",
-            Self::format_mac(&self.source_mac),
-            Self::format_mac(&self.destination_mac),
+            utils::format_mac(&self.source_mac),
+            utils::format_mac(&self.destination_mac),
             self.ether_type
         )
     }
@@ -92,8 +83,8 @@ impl Debug for EthernetFrame {
         write!(
             f,
             "[Ethernet II] {} -> {} Type={:?} Payload={:?}",
-            Self::format_mac(&self.source_mac),
-            Self::format_mac(&self.destination_mac),
+            utils::format_mac(&self.source_mac),
+            utils::format_mac(&self.destination_mac),
             self.ether_type,
             self.raw_payload
         )

@@ -3,7 +3,10 @@ use std::fmt::Display;
 use bytes::Bytes;
 use libc::timeval;
 
-use crate::{traits::Protocol, utils::timeval_to_string};
+use crate::{
+    traits::Protocol,
+    utils::{self, timeval_to_string},
+};
 
 #[derive(Debug, Clone)]
 pub struct DnsMessage {
@@ -367,25 +370,8 @@ impl Display for DnsMessage {
 impl Display for DnsRData {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            DnsRData::A(ip) => write!(
-                f,
-                "{}",
-                ip.iter()
-                    .map(|b| b.to_string())
-                    .collect::<Vec<_>>()
-                    .join(".")
-            ),
-            DnsRData::AAAA(ip) => write!(
-                f,
-                "{}",
-                ip.iter()
-                    .map(|b| format!("{b:02x}"))
-                    .collect::<Vec<_>>()
-                    .chunks(2)
-                    .map(|c| c.join(""))
-                    .collect::<Vec<_>>()
-                    .join(":")
-            ),
+            DnsRData::A(ip) => write!(f, "{}", utils::format_ipv4(ip)),
+            DnsRData::AAAA(ip) => write!(f, "{}", utils::format_ipv6(ip)),
             DnsRData::CName(name) => write!(f, "{}", name),
             DnsRData::Raw(bytes) => write!(
                 f,

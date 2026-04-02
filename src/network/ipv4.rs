@@ -9,7 +9,7 @@ use crate::{
     transport::{
         TransportPacket, icmp::IcmpPacket, igmp::IgmpMessage, tcp::TcpSegment, udp::UdpDatagram,
     },
-    utils::timeval_to_string,
+    utils::{self, timeval_to_string},
 };
 
 #[derive(Clone)]
@@ -31,13 +31,6 @@ pub struct IPv4Packet {
 }
 
 impl IPv4Packet {
-    pub fn fmt_ip(ip: &[u8; 4]) -> String {
-        ip.iter()
-            .map(|b| b.to_string())
-            .collect::<Vec<_>>()
-            .join(".")
-    }
-
     /// RFC 1071 one's complement checksum verification
     pub fn verify_checksum(data: Bytes) -> bool {
         let ihl = ((data[0] & 0xF) as usize) * 4;
@@ -139,8 +132,8 @@ impl Display for IPv4Packet {
         write!(
             f,
             "[IPv4] {} → {} TTL={} Proto={:?} Len={}",
-            Self::fmt_ip(&self.source_address),
-            Self::fmt_ip(&self.destination_address),
+            utils::format_ipv4(&self.source_address),
+            utils::format_ipv4(&self.destination_address),
             self.ttl,
             self.protocol,
             self.total_length
@@ -153,8 +146,8 @@ impl Debug for IPv4Packet {
         write!(
             f,
             "[IPv4] {} → {} IHL={} DSCP={} ECN={} Len={} ID={} Flags={} Fragment Offset={} TTL={} Proto={:?} Checksum={} Payload={:?}",
-            Self::fmt_ip(&self.source_address),
-            Self::fmt_ip(&self.destination_address),
+            utils::format_ipv4(&self.source_address),
+            utils::format_ipv4(&self.destination_address),
             self.ihl,
             self.dscp,
             self.ecn,

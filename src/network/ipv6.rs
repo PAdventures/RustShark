@@ -7,7 +7,7 @@ use crate::{
     network::ip_protocol::IpProtocol,
     traits::Protocol,
     transport::{TransportPacket, icmpv6::Icmpv6Packet, tcp::TcpSegment, udp::UdpDatagram},
-    utils::timeval_to_string,
+    utils::{self, timeval_to_string},
 };
 
 #[derive(Clone)]
@@ -21,17 +21,6 @@ pub struct IPv6Packet {
     pub destination_address: [u8; 16],
     pub payload: Option<TransportPacket>,
     pub raw_payload: Bytes,
-}
-
-impl IPv6Packet {
-    pub fn fmt_ip(ip: &[u8; 16]) -> String {
-        // Condense to standard colon-hex notation
-        let groups: Vec<String> = ip
-            .chunks(2)
-            .map(|c| format!("{:02x}{:02x}", c[0], c[1]))
-            .collect();
-        groups.join(":")
-    }
 }
 
 impl Protocol for IPv6Packet {
@@ -115,8 +104,8 @@ impl Display for IPv6Packet {
         write!(
             f,
             "[IPv6] {} → {} Hop={} Next={:?} Len={}",
-            Self::fmt_ip(&self.source_address),
-            Self::fmt_ip(&self.destination_address),
+            utils::format_ipv6(&self.source_address),
+            utils::format_ipv6(&self.destination_address),
             self.hop_limit,
             self.next_header,
             self.payload_length
@@ -129,8 +118,8 @@ impl Debug for IPv6Packet {
         write!(
             f,
             "[IPv6] {} → {} Traffic Class={} Flow Label={} Len={} Next={:?} Hop={} Payload={:?}",
-            Self::fmt_ip(&self.source_address),
-            Self::fmt_ip(&self.destination_address),
+            utils::format_ipv6(&self.source_address),
+            utils::format_ipv6(&self.destination_address),
             self.traffic_class,
             self.flow_label,
             self.payload_length,

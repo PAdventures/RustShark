@@ -3,7 +3,10 @@ use std::fmt::Display;
 use bytes::Bytes;
 use libc::timeval;
 
-use crate::{traits::Protocol, utils::timeval_to_string};
+use crate::{
+    traits::Protocol,
+    utils::{self, timeval_to_string},
+};
 
 #[derive(Clone)]
 pub enum IgmpMessage {
@@ -41,15 +44,6 @@ impl Display for IgmpVersion {
             Self::V1 => write!(f, "v1"),
             Self::V2 => write!(f, "v2"),
         }
-    }
-}
-
-impl IgmpMessage {
-    pub fn fmt_ip(ip: &[u8; 4]) -> String {
-        ip.iter()
-            .map(|b| b.to_string())
-            .collect::<Vec<_>>()
-            .join(".")
     }
 }
 
@@ -117,7 +111,7 @@ impl Display for IgmpMessage {
                 f,
                 "[IGMP{}] Membership Report group {}",
                 version,
-                Self::fmt_ip(group)
+                utils::format_ipv4(group)
             ),
             Self::GeneralQuery { version, .. } => {
                 write!(f, "[IGMP{}] Membership Query, general", version)
@@ -127,13 +121,13 @@ impl Display for IgmpMessage {
                 f,
                 "[IGMP{}] Membership Query, specific for group {}",
                 version,
-                Self::fmt_ip(group)
+                utils::format_ipv4(group)
             ),
             Self::Leave { group, .. } => write!(
                 f,
                 "[IGMPv2] Leave Group {}, specific for group {}",
-                Self::fmt_ip(group),
-                Self::fmt_ip(group)
+                utils::format_ipv4(group),
+                utils::format_ipv4(group)
             ),
         }
     }
