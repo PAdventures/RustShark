@@ -5,9 +5,7 @@ use libc::timeval;
 
 use crate::{
     network::ip_protocol::IpProtocol,
-    transport::{
-        TransportPacket, icmp::IcmpPacket, icmpv6::Icmpv6Packet, tcp::TcpSegment, udp::UdpDatagram,
-    },
+    transport::{TransportPacket, icmpv6::Icmpv6Packet, tcp::TcpSegment, udp::UdpDatagram},
     utils::timeval_to_string,
 };
 
