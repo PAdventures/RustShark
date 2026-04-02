@@ -1,7 +1,10 @@
+use std::sync::{Arc, RwLock};
+
 use bytes::Bytes;
 
 use crate::{
     application::{parse_tcp_application, parse_udp_application},
+    dns_cache::DnsCache,
     network::ip_protocol::IpProtocol,
     traits::Protocol,
 };
@@ -21,7 +24,11 @@ pub enum TransportPacket {
     IGMP(igmp::IgmpMessage),
 }
 
-pub fn parse_transport(protocol: IpProtocol, payload: Bytes) -> Option<TransportPacket> {
+pub fn parse_transport(
+    protocol: IpProtocol,
+    payload: Bytes,
+    dns_cache: Option<&Arc<RwLock<DnsCache>>>,
+) -> Option<TransportPacket> {
     match protocol {
         IpProtocol::TCP => {
             if let Some(mut tcp) = tcp::TcpSegment::parse(payload) {
@@ -31,7 +38,7 @@ pub fn parse_transport(protocol: IpProtocol, payload: Bytes) -> Option<Transport
         }
         IpProtocol::UDP => {
             if let Some(mut udp) = udp::UdpDatagram::parse(payload) {
-                udp.payload = parse_udp_application(udp.clone());
+                udp.payload = parse_udp_application(dns_cache, udp.clone());
                 return Some(TransportPacket::UDP(udp));
             }
         }

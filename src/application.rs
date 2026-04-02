@@ -3,7 +3,10 @@ pub mod http;
 pub mod quic;
 pub mod tls;
 
+use std::sync::{Arc, RwLock};
+
 use crate::{
+    dns_cache::DnsCache,
     traits::Protocol,
     transport::{tcp::TcpSegment, udp::UdpDatagram},
 };
@@ -40,10 +43,16 @@ pub fn parse_tcp_application(tcp: TcpSegment) -> Option<ApplicationMessage> {
     }
 }
 
-pub fn parse_udp_application(udp: UdpDatagram) -> Option<ApplicationMessage> {
+pub fn parse_udp_application(
+    dns_cache: Option<&Arc<RwLock<DnsCache>>>,
+    udp: UdpDatagram,
+) -> Option<ApplicationMessage> {
     match (udp.source_port, udp.destination_port) {
         (53, _) | (_, 53) => {
             if let Some(dns) = dns::DnsMessage::parse(udp.raw_payload) {
+                if let Some(cache) = dns_cache {
+                    dns.populate_cache(cache);
+                }
                 return Some(ApplicationMessage::DNS(dns));
             }
             return None;

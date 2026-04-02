@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use bytes::Bytes;
 
-use crate::{traits::Protocol, utils};
+use crate::{dns_cache::SharedDnsCache, traits::Protocol, utils};
 
 #[derive(Debug, Clone)]
 pub struct DnsMessage {
@@ -90,6 +90,33 @@ pub enum DnsRData {
     TXT(String),
     AAAA([u8; 16]),
     Raw(Vec<u8>),
+}
+
+impl DnsMessage {
+    pub fn populate_cache(&self, cache: &SharedDnsCache) {
+        if !self.is_response {
+            return;
+        }
+
+        let hostname = match self.questions.first() {
+            Some(q) => q.name.clone(),
+            None => return,
+        };
+
+        let Ok(mut cache) = cache.write() else { return };
+
+        for answer in &self.answers {
+            match &answer.rdata {
+                DnsRData::A(ip) => {
+                    cache.insert_a(*ip, hostname.clone(), answer.ttl);
+                }
+                DnsRData::AAAA(ip) => {
+                    cache.insert_aaaa(*ip, hostname.clone(), answer.ttl);
+                }
+                _ => {}
+            }
+        }
+    }
 }
 
 fn parse_name(data: &[u8], mut pos: usize) -> Option<(String, usize)> {
