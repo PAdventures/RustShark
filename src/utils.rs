@@ -1,3 +1,5 @@
+use std::net::{Ipv4Addr, Ipv6Addr};
+
 use chrono::{TimeZone, Utc};
 use libc::timeval;
 
@@ -16,21 +18,20 @@ pub fn format_mac(mac: &[u8; 6]) -> String {
 }
 
 pub fn format_ipv4(ip: &[u8; 4]) -> String {
-    ip.iter()
-        .map(|b| b.to_string())
-        .collect::<Vec<_>>()
-        .join(".")
+    let addr = Ipv4Addr::from(*ip);
+    addr.to_string()
 }
 
 pub fn format_ipv6(ip: &[u8; 16]) -> String {
-    let groups: Vec<String> = ip
-        .chunks(2)
-        .map(|c| format!("{:02x}{:02x}", c[0], c[1]))
-        .collect();
-    groups.join(":")
+    let addr = Ipv6Addr::from(*ip);
+    addr.to_string()
 }
 
 pub fn format_bytes(bytes: &Vec<u8>) -> String {
+    if bytes.is_empty() {
+        return String::from("none");
+    }
+
     bytes
         .iter()
         .map(|b| format!("{b:02x}"))
