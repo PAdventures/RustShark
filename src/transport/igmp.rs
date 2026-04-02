@@ -1,12 +1,8 @@
 use std::fmt::Display;
 
 use bytes::Bytes;
-use libc::timeval;
 
-use crate::{
-    traits::Protocol,
-    utils::{self, timeval_to_string},
-};
+use crate::{traits::Protocol, utils};
 
 #[derive(Clone)]
 pub enum IgmpMessage {
@@ -99,8 +95,8 @@ impl Protocol for IgmpMessage {
         }
     }
 
-    fn format_protocol(count: u64, ts: timeval, protocol: Self) -> String {
-        format!("{count} {} {}", timeval_to_string(ts), protocol.to_string())
+    fn format_protocol(protocol: Self) -> String {
+        protocol.to_string()
     }
 }
 

@@ -27,3 +27,11 @@ pub fn format_ipv6(ip: &[u8; 16]) -> String {
         .collect();
     groups.join(":")
 }
+
+pub fn format_bytes(bytes: &Vec<u8>) -> String {
+    bytes
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect::<Vec<_>>()
+        .join("")
+}

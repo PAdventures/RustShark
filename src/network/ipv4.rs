@@ -1,7 +1,6 @@
 use std::fmt::{Debug, Display};
 
 use bytes::Bytes;
-use libc::timeval;
 
 use crate::{
     network::ip_protocol::IpProtocol,
@@ -9,7 +8,7 @@ use crate::{
     transport::{
         TransportPacket, icmp::IcmpPacket, igmp::IgmpMessage, tcp::TcpSegment, udp::UdpDatagram,
     },
-    utils::{self, timeval_to_string},
+    utils,
 };
 
 #[derive(Clone)]
@@ -110,20 +109,20 @@ impl Protocol for IPv4Packet {
         })
     }
 
-    fn format_protocol(count: u64, ts: timeval, protocol: Self) -> String {
+    fn format_protocol(protocol: Self) -> String {
         if let Some(payload) = protocol.to_owned().payload {
             match payload {
-                TransportPacket::TCP(tcp) => return TcpSegment::format_protocol(count, ts, tcp),
-                TransportPacket::UDP(udp) => return UdpDatagram::format_protocol(count, ts, udp),
-                TransportPacket::ICMP(icmp) => return IcmpPacket::format_protocol(count, ts, icmp),
+                TransportPacket::TCP(tcp) => return TcpSegment::format_protocol(tcp),
+                TransportPacket::UDP(udp) => return UdpDatagram::format_protocol(udp),
+                TransportPacket::ICMP(icmp) => return IcmpPacket::format_protocol(icmp),
                 TransportPacket::IGMP(igmp) => {
-                    return IgmpMessage::format_protocol(count, ts, igmp);
+                    return IgmpMessage::format_protocol(igmp);
                 }
                 _ => (),
             }
         }
 
-        format!("{count} {} {}", timeval_to_string(ts), protocol.to_string())
+        protocol.to_string()
     }
 }
 

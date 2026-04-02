@@ -1,12 +1,10 @@
 use std::fmt::Display;
 
 use bytes::Bytes;
-use libc::timeval;
 
 use crate::{
     application::{ApplicationMessage, dns::DnsMessage, http::HttpMessage, tls::TlsRecord},
     traits::Protocol,
-    utils::timeval_to_string,
 };
 
 #[derive(Clone)]
@@ -136,16 +134,18 @@ impl Protocol for TcpSegment {
         })
     }
 
-    fn format_protocol(count: u64, ts: timeval, protocol: TcpSegment) -> String {
-        if let Some(payload) = protocol.payload {
+    fn format_protocol(protocol: TcpSegment) -> String {
+        if let Some(payload) = protocol.to_owned().payload {
             match payload {
-                ApplicationMessage::HTTP(http) => HttpMessage::format_protocol(count, ts, http),
-                ApplicationMessage::DNS(dns) => DnsMessage::format_protocol(count, ts, dns),
-                ApplicationMessage::TLS(tls) => TlsRecord::format_protocol(count, ts, tls),
+                ApplicationMessage::HTTP(http) => {
+                    return HttpMessage::format_protocol(http);
+                }
+                ApplicationMessage::DNS(dns) => return DnsMessage::format_protocol(dns),
+                ApplicationMessage::TLS(tls) => return TlsRecord::format_protocol(tls),
+                _ => (),
             }
-        } else {
-            format!("{count} {} {}", timeval_to_string(ts), protocol.to_string())
         }
+        protocol.to_string()
     }
 }
 

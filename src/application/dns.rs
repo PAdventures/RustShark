@@ -1,12 +1,8 @@
 use std::fmt::Display;
 
 use bytes::Bytes;
-use libc::timeval;
 
-use crate::{
-    traits::Protocol,
-    utils::{self, timeval_to_string},
-};
+use crate::{traits::Protocol, utils};
 
 #[derive(Debug, Clone)]
 pub struct DnsMessage {
@@ -327,8 +323,8 @@ impl Protocol for DnsMessage {
         })
     }
 
-    fn format_protocol(count: u64, ts: timeval, protocol: DnsMessage) -> String {
-        format!("{count} {} {}", timeval_to_string(ts), protocol.to_string())
+    fn format_protocol(protocol: DnsMessage) -> String {
+        protocol.to_string()
     }
 }
 
@@ -373,15 +369,7 @@ impl Display for DnsRData {
             DnsRData::A(ip) => write!(f, "{}", utils::format_ipv4(ip)),
             DnsRData::AAAA(ip) => write!(f, "{}", utils::format_ipv6(ip)),
             DnsRData::CName(name) => write!(f, "{}", name),
-            DnsRData::Raw(bytes) => write!(
-                f,
-                "0x{}",
-                bytes
-                    .iter()
-                    .map(|b| format!("{b:02x}"))
-                    .collect::<Vec<_>>()
-                    .join("")
-            ),
+            DnsRData::Raw(bytes) => write!(f, "0x{}", utils::format_bytes(bytes)),
             DnsRData::SOA { mname, .. } => write!(f, "{}", mname),
             DnsRData::NS(ns) => write!(f, "{}", ns),
             DnsRData::PTR(ptr) => write!(f, "{}", ptr),

@@ -1,12 +1,11 @@
 use std::fmt::{Debug, Display};
 
 use bytes::Bytes;
-use libc::timeval;
 
 use crate::{
     network::{NetworkPacket, arp::ArpPacket, ipv4::IPv4Packet, ipv6::IPv6Packet},
     traits::Protocol,
-    utils::{self, timeval_to_string},
+    utils,
 };
 
 #[derive(Clone)]
@@ -53,15 +52,15 @@ impl Protocol for EthernetFrame {
         })
     }
 
-    fn format_protocol(count: u64, ts: timeval, protocol: Self) -> String {
+    fn format_protocol(protocol: Self) -> String {
         if let Some(payload) = protocol.payload {
             match payload {
-                NetworkPacket::IPv4(ipv4) => IPv4Packet::format_protocol(count, ts, ipv4),
-                NetworkPacket::IPv6(ipv6) => IPv6Packet::format_protocol(count, ts, ipv6),
-                NetworkPacket::ARP(arp) => ArpPacket::format_protocol(count, ts, arp),
+                NetworkPacket::IPv4(ipv4) => IPv4Packet::format_protocol(ipv4),
+                NetworkPacket::IPv6(ipv6) => IPv6Packet::format_protocol(ipv6),
+                NetworkPacket::ARP(arp) => ArpPacket::format_protocol(arp),
             }
         } else {
-            format!("{count} {} {}", timeval_to_string(ts), protocol.to_string())
+            protocol.to_string()
         }
     }
 }

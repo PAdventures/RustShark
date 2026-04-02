@@ -1,9 +1,8 @@
 use std::fmt::Display;
 
 use bytes::Bytes;
-use libc::timeval;
 
-use crate::{traits::Protocol, utils::timeval_to_string};
+use crate::traits::Protocol;
 
 #[derive(Debug, Clone)]
 pub struct IcmpPacket {
@@ -68,8 +67,8 @@ impl Protocol for IcmpPacket {
         })
     }
 
-    fn format_protocol(count: u64, ts: timeval, protocol: IcmpPacket) -> String {
-        format!("{count} {} {}", timeval_to_string(ts), protocol.to_string())
+    fn format_protocol(protocol: IcmpPacket) -> String {
+        protocol.to_string()
     }
 }
 

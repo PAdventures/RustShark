@@ -1,12 +1,12 @@
 use std::fmt::Display;
 
 use bytes::Bytes;
-use libc::timeval;
 
 use crate::{
-    application::{ApplicationMessage, dns::DnsMessage, http::HttpMessage, tls::TlsRecord},
+    application::{
+        ApplicationMessage, dns::DnsMessage, http::HttpMessage, quic::QuicPacket, tls::TlsRecord,
+    },
     traits::Protocol,
-    utils::timeval_to_string,
 };
 
 #[derive(Clone)]
@@ -47,15 +47,16 @@ impl Protocol for UdpDatagram {
         })
     }
 
-    fn format_protocol(count: u64, ts: timeval, protocol: UdpDatagram) -> String {
+    fn format_protocol(protocol: UdpDatagram) -> String {
         if let Some(payload) = protocol.payload {
             match payload {
-                ApplicationMessage::HTTP(http) => HttpMessage::format_protocol(count, ts, http),
-                ApplicationMessage::DNS(dns) => DnsMessage::format_protocol(count, ts, dns),
-                ApplicationMessage::TLS(tls) => TlsRecord::format_protocol(count, ts, tls),
+                ApplicationMessage::HTTP(http) => HttpMessage::format_protocol(http),
+                ApplicationMessage::DNS(dns) => DnsMessage::format_protocol(dns),
+                ApplicationMessage::TLS(tls) => TlsRecord::format_protocol(tls),
+                ApplicationMessage::QUIC(quic) => QuicPacket::format_protocol(quic),
             }
         } else {
-            format!("{count} {} {}", timeval_to_string(ts), protocol.to_string())
+            protocol.to_string()
         }
     }
 }

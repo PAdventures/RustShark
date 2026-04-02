@@ -1,13 +1,12 @@
 use std::fmt::{Debug, Display};
 
 use bytes::Bytes;
-use libc::timeval;
 
 use crate::{
     network::ip_protocol::IpProtocol,
     traits::Protocol,
     transport::{TransportPacket, icmpv6::Icmpv6Packet, tcp::TcpSegment, udp::UdpDatagram},
-    utils::{self, timeval_to_string},
+    utils,
 };
 
 #[derive(Clone)]
@@ -84,18 +83,18 @@ impl Protocol for IPv6Packet {
         })
     }
 
-    fn format_protocol(count: u64, ts: timeval, protocol: Self) -> String {
+    fn format_protocol(protocol: Self) -> String {
         if let Some(payload) = protocol.to_owned().payload {
             match payload {
-                TransportPacket::TCP(tcp) => return TcpSegment::format_protocol(count, ts, tcp),
-                TransportPacket::UDP(udp) => return UdpDatagram::format_protocol(count, ts, udp),
+                TransportPacket::TCP(tcp) => return TcpSegment::format_protocol(tcp),
+                TransportPacket::UDP(udp) => return UdpDatagram::format_protocol(udp),
                 TransportPacket::ICMPv6(icmpv6) => {
-                    return Icmpv6Packet::format_protocol(count, ts, icmpv6);
+                    return Icmpv6Packet::format_protocol(icmpv6);
                 }
                 _ => (),
             }
         }
-        format!("{count} {} {}", timeval_to_string(ts), protocol.to_string())
+        protocol.to_string()
     }
 }
 

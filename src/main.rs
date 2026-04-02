@@ -134,8 +134,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         println!(
-            "{}",
-            EthernetFrame::format_protocol(packet_count, packet.header.ts, ethernet)
+            "{packet_count} {} {}",
+            timeval_to_string(packet.header.ts),
+            EthernetFrame::format_protocol(ethernet)
         );
     }
 
