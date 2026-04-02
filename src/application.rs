@@ -1,5 +1,6 @@
 pub mod dns;
 pub mod http;
+pub mod quic;
 pub mod tls;
 
 use crate::{
@@ -12,6 +13,7 @@ pub enum ApplicationMessage {
     HTTP(http::HttpMessage),
     TLS(tls::TlsRecord),
     DNS(dns::DnsMessage),
+    QUIC(quic::QuicPacket),
 }
 
 pub fn parse_tcp_application(tcp: TcpSegment) -> Option<ApplicationMessage> {
@@ -43,6 +45,12 @@ pub fn parse_udp_application(udp: UdpDatagram) -> Option<ApplicationMessage> {
         (53, _) | (_, 53) => {
             if let Some(dns) = dns::DnsMessage::parse(udp.raw_payload) {
                 return Some(ApplicationMessage::DNS(dns));
+            }
+            return None;
+        }
+        (443, _) | (_, 443) => {
+            if let Some(quic) = quic::QuicPacket::parse(udp.raw_payload) {
+                return Some(ApplicationMessage::QUIC(quic));
             }
             return None;
         }
