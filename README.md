@@ -9,6 +9,14 @@ The project is in early stages of development, and currently supports only a lim
 
 Furthermore, all developement is being done on MacOS, so there may be compatibility issues on other operating systems. Contributions and feedback are welcome to help improve the project and expand its capabilities.
 
+## Platform Support
+
+| Platform | Status                                               |
+| -------- | ---------------------------------------------------- |
+| macOS    | ✅ Fully supported — primary development platform    |
+| Linux    | ⚠️ Best-effort — core functionality expected to work |
+| Windows  | ❌ Not supported                                     |
+
 ## Usage
 
 To use RustShark, you must first clone the repository and build the project using Cargo:
