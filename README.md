@@ -9,6 +9,14 @@ The project is in early stages of development, and currently supports only a lim
 
 Furthermore, all developement is being done on MacOS, so there may be compatibility issues on other operating systems. Contributions and feedback are welcome to help improve the project and expand its capabilities.
 
+## Platform Support
+
+| Platform | Status                                               |
+| -------- | ---------------------------------------------------- |
+| macOS    | ✅ Fully supported — primary development platform    |
+| Linux    | ⚠️ Best-effort — core functionality expected to work |
+| Windows  | ❌ Not supported                                     |
+
 ## Usage
 
 To use RustShark, you must first clone the repository and build the project using Cargo:
@@ -62,7 +70,7 @@ RustShark currently supports the following protocols:
 - IPv6
 - ARP
 - ICMP(v6)
-- IGMP (version 1 and 2 only)
+- IGMP
 - TCP
 - UDP
 - HTTP
@@ -74,9 +82,11 @@ RustShark will try to decode as many layers of the packet as possible, and will 
 There is also the option for a debug mode which will print out all info and hexadecimal data of the payload, for the last layer of the packet.
 
 RustShark will also store resolved DNS queries in a cache allowing for IPv4 or IPv6 addresses to be resolved to their corresponding domain names when possible, making it easier to understand the captured traffic.
+DNS resolution caching is optionally persistant on program exit and will save the state of the cache to a `.json` file which can be loaded at the start of the program.
+On loading the saved cache, all stale DNS enties will automatically be evicted.
 _This feature is only supported for resolving IP addresses when the "--address" option is enabled which will print the IP address (or domain name) of the source and destination of each packet_
 
-> Note: DNS resolution is an opt-out feature and address displaying is opt-in. A future update may save the cached DNS queries to a file for later use, allowing for DNS resolution even after the program has been closed.
+> Note: DNS resolution is an opt-out feature and address displaying is opt-in
 
 As packets are captured, RustShark will also insert each packet into a `.pcap` file with the appropriate format (again, only tested for MacOS) and timestamp, allowing for later analysis using other tools such as Wireshark or tcpdump.
 _This is a very useful feature for debugging and testing, as it allows you to capture packets in real-time and then analyse them later using a more powerful tool._
