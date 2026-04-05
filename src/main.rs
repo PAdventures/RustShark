@@ -10,6 +10,7 @@ mod utils;
 
 use bytes::Bytes;
 use pcap::Capture;
+use std::fs::File;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
@@ -32,19 +33,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let running = Arc::new(AtomicBool::new(true));
     let r = running.clone();
 
-    let dns_cache = DnsCache::new_shared();
-
-    ctrlc::set_handler(move || {
-        eprintln!("\nCaught Ctrl+C, flushing and closing...");
-        r.store(false, Ordering::SeqCst);
-    })?;
-
     let matches = cli::cmd().get_matches();
 
     let debug_mode = matches.get_flag("debug");
     let immediate_mode = matches.get_flag("immediate");
     let no_resolve = matches.get_flag("no-resolve");
     let address = matches.get_flag("address");
+    let save_cache = matches.get_flag("save-cache");
+    let load_cache = matches.get_flag("load-cache");
     let interface = matches.get_one::<String>("interface").unwrap();
     let output_file = matches.get_one::<String>("output").unwrap();
     let filter = matches.get_one::<String>("filter").unwrap();
@@ -58,6 +54,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .unwrap()
         .parse::<u64>()
         .unwrap_or(60);
+    let save_dns = matches.get_one::<String>("save-dns").unwrap();
+    let load_dns = matches.get_one::<String>("load-dns").unwrap();
 
     if debug_mode {
         println!("Debug mode is enabled")
@@ -66,6 +64,38 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if immediate_mode {
         println!("Immediate mode is enabled")
     }
+
+    let dns_cache = if load_cache {
+        DnsCache::load_from_file(load_dns).unwrap_or(DnsCache::new_shared())
+    } else {
+        DnsCache::new_shared()
+    };
+
+    let cache_for_ctrlc = dns_cache.clone();
+
+    let save_dns_file = save_dns.to_owned();
+
+    ctrlc::set_handler(move || {
+        eprintln!("\nCaught Ctrl+C, flushing and closing...");
+        r.store(false, Ordering::SeqCst);
+
+        if !save_cache {
+            return;
+        }
+
+        if let Ok(cache) = cache_for_ctrlc.read() {
+            if cache.len() > 0 {
+                eprintln!("[DNS Cache] Saving {} entries to file...", cache.len());
+                if let Err(e) = cache.save_to_file(&save_dns_file) {
+                    eprintln!("[DNS Cache] Failed to save cache: {e}");
+                } else {
+                    eprintln!("[DNS Cache] Cache saved successfully");
+                }
+            } else {
+                eprintln!("[DNS Cache] No entries to save");
+            }
+        }
+    })?;
 
     let mut capture = Capture::from_device(interface.as_str())?
         .promisc(true)
