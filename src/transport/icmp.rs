@@ -17,7 +17,7 @@ pub struct IcmpPacket {
 pub enum IcmpType {
     EchoReply,
     EchoRequest,
-    DestUnreachable,
+    DestinationUnreachable,
     TimeExceeded,
     RedirectMessage,
     RouterAdvertisement,
@@ -33,7 +33,7 @@ impl IcmpType {
     fn from_u8(t: u8) -> Option<Self> {
         let r = match t {
             0 => IcmpType::EchoReply,
-            3 => IcmpType::DestUnreachable,
+            3 => IcmpType::DestinationUnreachable,
             5 => IcmpType::RedirectMessage,
             9 => IcmpType::RouterAdvertisement,
             10 => IcmpType::RouterSolicitation,
@@ -118,7 +118,7 @@ impl Display for IcmpPacket {
         match self.icmp_type {
             IcmpType::EchoReply => write!(f, "[ICMP] Echo Reply"),
             IcmpType::EchoRequest => write!(f, "[ICMP] Echo request"),
-            IcmpType::DestUnreachable => {
+            IcmpType::DestinationUnreachable => {
                 let code_str = match self.code {
                     0 => "Network unreachable",
                     1 => "Host unreachable",
