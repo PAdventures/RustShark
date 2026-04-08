@@ -26,12 +26,11 @@ pub enum IcmpType {
     TimestampReply,
     ExtendedEchoRequest,
     ExtendedEchoReply,
-    Unknown(u8),
 }
 
 impl IcmpType {
-    fn from_type_code(t: u8) -> Self {
-        match t {
+    fn from_u8(t: u8) -> Option<Self> {
+        let r = match t {
             0 => IcmpType::EchoReply,
             3 => IcmpType::DestUnreachable,
             5 => IcmpType::RedirectMessage,
@@ -44,8 +43,9 @@ impl IcmpType {
             14 => IcmpType::TimestampReply,
             42 => IcmpType::ExtendedEchoRequest,
             43 => IcmpType::ExtendedEchoReply,
-            other => IcmpType::Unknown(other),
-        }
+            _ => return None,
+        };
+        Some(r)
     }
 }
 
@@ -55,7 +55,7 @@ impl Protocol for IcmpPacket {
             return None;
         }
 
-        let icmp_type = IcmpType::from_type_code(data[0]);
+        let icmp_type = IcmpType::from_u8(data[0])?;
         let code = data[1];
         let checksum = u16::from_be_bytes([data[2], data[3]]);
 

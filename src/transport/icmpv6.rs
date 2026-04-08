@@ -46,12 +46,11 @@ pub enum Icmpv6Type {
     RPLControlMessage,
     ExtendedEchoRequest,
     ExtendedEchoReply,
-    Unknown(u8),
 }
 
 impl Icmpv6Type {
-    fn from_type_code(t: u8) -> Self {
-        match t {
+    fn from_u8(t: u8) -> Option<Self> {
+        let r = match t {
             1 => Icmpv6Type::DestinationUnreachable,
             2 => Icmpv6Type::PacketTooBig,
             3 => Icmpv6Type::TimeExceeded,
@@ -84,8 +83,9 @@ impl Icmpv6Type {
             155 => Icmpv6Type::RPLControlMessage,
             160 => Icmpv6Type::ExtendedEchoRequest,
             161 => Icmpv6Type::ExtendedEchoReply,
-            other => Icmpv6Type::Unknown(other),
-        }
+            _ => return None,
+        };
+        Some(r)
     }
 }
 
@@ -95,7 +95,7 @@ impl Protocol for Icmpv6Packet {
             return None;
         }
 
-        let icmp_type = Icmpv6Type::from_type_code(data[0]);
+        let icmp_type = Icmpv6Type::from_u8(data[0])?;
         let code = data[1];
         let checksum = u16::from_be_bytes([data[2], data[3]]);
 
