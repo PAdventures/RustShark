@@ -80,7 +80,7 @@ impl Protocol for IcmpPacket {
                 let ip = [data[4], data[5], data[6], data[7]];
                 Some(IcmpPayload::RedirectMessage { ip })
             }
-            IcmpType::Timestamp | IcmpType::TimestampReply if data.len() == 20 => {
+            IcmpType::Timestamp | IcmpType::TimestampReply if data.len() >= 20 => {
                 let id = u16::from_be_bytes([data[4], data[5]]);
                 let seq = u16::from_be_bytes([data[6], data[7]]);
                 let origin_ts = u32::from_be_bytes([data[8], data[9], data[10], data[11]]);
