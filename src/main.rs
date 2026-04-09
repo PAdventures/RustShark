@@ -10,7 +10,6 @@ mod utils;
 
 use bytes::Bytes;
 use pcap::Capture;
-use std::fs::File;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
