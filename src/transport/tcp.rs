@@ -7,7 +7,7 @@ use crate::{
     traits::Protocol,
 };
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct TcpSegment {
     pub source_port: u16,
     pub destination_port: u16,
@@ -22,7 +22,7 @@ pub struct TcpSegment {
     pub raw_payload: Bytes,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct TcpFlags {
     pub cwr: bool,
     pub ece: bool,

@@ -4,13 +4,13 @@ use bytes::Bytes;
 
 use crate::traits::Protocol;
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub enum HttpMessage {
     Request(HttpRequest),
     Response(HttpResponse),
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct HttpRequest {
     pub method: String,
     pub path: String,
@@ -19,7 +19,7 @@ pub struct HttpRequest {
     pub body: Bytes,
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct HttpResponse {
     pub version: String,
     pub status: u16,

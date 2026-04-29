@@ -8,7 +8,7 @@ use crate::{
     utils,
 };
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct EthernetFrame {
     pub destination_mac: [u8; 6],
     pub source_mac: [u8; 6],
@@ -17,7 +17,7 @@ pub struct EthernetFrame {
     pub raw_payload: Bytes,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum EtherType {
     IPv4,
     IPv6,

@@ -4,7 +4,7 @@ use bytes::Bytes;
 
 use crate::{traits::Protocol, utils};
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub enum IgmpMessage {
     GeneralQuery {
         version: IgmpVersion,
@@ -50,7 +50,7 @@ pub enum IgmpMessage {
     },
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct V3GroupRecord {
     pub record_type: V3GroupRecordType,
     pub num_src: u16,

@@ -4,7 +4,7 @@ use bytes::Bytes;
 
 use crate::{traits::Protocol, utils};
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct ArpPacket {
     pub hardware_type: HardwareType,
     pub protocol_type: ProtocolType,
@@ -17,17 +17,17 @@ pub struct ArpPacket {
     pub target_protocol_address: [u8; 4],
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum HardwareType {
     Ethernet,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ProtocolType {
     IPv4,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ArpOperation {
     Request,
     Reply,

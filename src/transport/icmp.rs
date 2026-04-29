@@ -4,7 +4,7 @@ use bytes::Bytes;
 
 use crate::{traits::Protocol, utils};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct IcmpPacket {
     pub icmp_type: IcmpType,
     pub code: u8,
@@ -50,7 +50,7 @@ impl IcmpType {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum IcmpPayload {
     RedirectMessage {
         ip: [u8; 4],

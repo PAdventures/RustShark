@@ -8,7 +8,7 @@ const QUIC_V1: u32 = 0x00000001;
 const QUIC_V2: u32 = 0x6B3343CF;
 const QUIC_VERSION_NEGOTIATION: u32 = 0x00000000;
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub enum QuicPacket {
     Initial(QuicInitial),
     ZeroRtt(QuicZeroRtt),
@@ -17,7 +17,7 @@ pub enum QuicPacket {
     VersionNegotiation(QuicVersionNegotiation),
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct QuicInitial {
     pub version: u32,
     pub dcid: Bytes,
@@ -25,21 +25,21 @@ pub struct QuicInitial {
     pub token: Bytes,
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct QuicZeroRtt {
     pub version: u32,
     pub dcid: Bytes,
     pub scid: Bytes,
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct QuicHandshake {
     pub version: u32,
     pub dcid: Bytes,
     pub scid: Bytes,
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct QuicRetry {
     pub version: u32,
     pub dcid: Bytes,
@@ -48,7 +48,7 @@ pub struct QuicRetry {
     pub integrity_tag: [u8; 16],
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct QuicVersionNegotiation {
     pub dcid: Bytes,
     pub scid: Bytes,

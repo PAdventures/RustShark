@@ -11,7 +11,7 @@ use crate::{
     utils,
 };
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct IPv4Packet {
     pub ihl: u8,
     pub dscp: u8,

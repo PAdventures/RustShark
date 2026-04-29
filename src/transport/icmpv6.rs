@@ -4,7 +4,7 @@ use bytes::Bytes;
 
 use crate::{traits::Protocol, utils};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Icmpv6Packet {
     pub icmp_type: Icmpv6Type,
     pub code: u8,
@@ -13,7 +13,7 @@ pub struct Icmpv6Packet {
     pub raw_payload: Bytes,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Icmpv6Type {
     DestinationUnreachable,
     PacketTooBig,
@@ -68,7 +68,7 @@ impl Icmpv6Type {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Icmpv6Payload {
     RouterAdvertisement {
         cur_hop_lim: u8,

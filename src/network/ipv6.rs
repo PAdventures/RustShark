@@ -9,7 +9,7 @@ use crate::{
     utils,
 };
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct IPv6Packet {
     pub traffic_class: u8,
     pub flow_label: u32,

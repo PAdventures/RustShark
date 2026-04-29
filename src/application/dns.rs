@@ -4,7 +4,7 @@ use bytes::Bytes;
 
 use crate::{dns_cache::SharedDnsCache, traits::Protocol, utils};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct DnsMessage {
     pub transaction_id: u16,
     pub is_response: bool,
@@ -23,13 +23,13 @@ pub struct DnsMessage {
     pub additionals: Vec<DnsAnswer>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct DnsQuestion {
     pub name: String,
     pub qtype: DnsType,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct DnsAnswer {
     pub name: String,
     pub rtype: DnsType,
@@ -37,7 +37,7 @@ pub struct DnsAnswer {
     pub rdata: DnsRData,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum DnsType {
     A,
     NS,
@@ -68,7 +68,7 @@ impl DnsType {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum DnsRData {
     A([u8; 4]),
     NS(String),

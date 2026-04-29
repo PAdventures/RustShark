@@ -4,14 +4,14 @@ use bytes::Bytes;
 
 use crate::traits::Protocol;
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct TlsRecord {
     pub content_type: TlsContentType,
     pub version: TlsVersion,
     pub payload: Bytes,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum TlsContentType {
     ChangeCipherSpec,
     Alert,
@@ -20,7 +20,7 @@ pub enum TlsContentType {
     Unknown(u8),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum TlsHandshakeType {
     ClientHello,
     ServerHello,
@@ -30,7 +30,7 @@ pub enum TlsHandshakeType {
     Unknown(u8),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TlsVersion {
     pub major: u8,
     pub minor: u8,

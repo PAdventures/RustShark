@@ -9,7 +9,7 @@ use crate::{
     traits::Protocol,
 };
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct UdpDatagram {
     pub source_port: u16,
     pub destination_port: u16,
