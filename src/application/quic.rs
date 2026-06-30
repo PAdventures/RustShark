@@ -107,11 +107,17 @@ impl Protocol for QuicPacket {
 
             let dcid_len = *data.get(cursor)? as usize;
             cursor += 1;
+            if data.len() < cursor + dcid_len {
+                return None;
+            }
             let dcid = data.slice(cursor..cursor + dcid_len);
             cursor += dcid_len;
 
             let scid_len = *data.get(cursor)? as usize;
             cursor += 1;
+            if data.len() < cursor + scid_len {
+                return None;
+            }
             let scid = data.slice(cursor..cursor + scid_len);
             cursor += scid_len;
 
@@ -162,12 +168,18 @@ impl Protocol for QuicPacket {
         if dcid_len > 20 {
             return None;
         }
+        if data.len() < cursor + dcid_len {
+            return None;
+        }
         let dcid = data.slice(cursor..cursor + dcid_len);
         cursor += dcid_len;
 
         let scid_len = *data.get(cursor)? as usize;
         cursor += 1;
         if scid_len > 20 {
+            return None;
+        }
+        if data.len() < cursor + scid_len {
             return None;
         }
         let scid = data.slice(cursor..cursor + scid_len);
@@ -179,6 +191,9 @@ impl Protocol for QuicPacket {
             0x0 => {
                 let (token_len, consumed) = read_varint(data.get(cursor..)?)?;
                 cursor += consumed;
+                if data.len() < cursor + token_len as usize {
+                    return None;
+                }
                 let token = data.slice(cursor..cursor + token_len as usize);
                 Some(QuicPacket::Initial(QuicInitial {
                     version,
@@ -277,5 +292,86 @@ fn fmt_version(v: u32) -> String {
         QUIC_VERSION_NEGOTIATION => "version-negotiation".to_string(),
         v if v >> 8 == 0xFF0000 => format!("draft-{}", v & 0xFF),
         v => format!("0x{v:08X}"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn long_header(packet_type: u8) -> Vec<u8> {
+        vec![
+            0xc0 | (packet_type << 4),
+            0x00,
+            0x00,
+            0x00,
+            0x01,
+            0x02,
+            0xaa,
+            0xbb,
+            0x01,
+            0xcc,
+        ]
+    }
+
+    #[test]
+    fn parses_quic_initial_with_token() {
+        let mut data = long_header(0);
+        data.extend_from_slice(&[0x02, 0xde, 0xad]);
+
+        let parsed = QuicPacket::parse(Bytes::from(data)).unwrap();
+
+        match parsed {
+            QuicPacket::Initial(initial) => {
+                assert_eq!(initial.version, QUIC_V1);
+                assert_eq!(initial.dcid, Bytes::from_static(&[0xaa, 0xbb]));
+                assert_eq!(initial.scid, Bytes::from_static(&[0xcc]));
+                assert_eq!(initial.token, Bytes::from_static(&[0xde, 0xad]));
+            }
+            _ => panic!("expected initial"),
+        }
+    }
+
+    #[test]
+    fn parses_version_negotiation_and_retry() {
+        let parsed = QuicPacket::parse(Bytes::from_static(&[
+            0xc0, 0, 0, 0, 0, 1, 0xaa, 1, 0xbb, 0, 0, 0, 1, 0x6b, 0x33, 0x43, 0xcf,
+        ]))
+        .unwrap();
+
+        assert!(matches!(
+            parsed,
+            QuicPacket::VersionNegotiation(QuicVersionNegotiation {
+                supported_versions,
+                ..
+            }) if supported_versions == vec![QUIC_V1, QUIC_V2]
+        ));
+
+        let mut retry = long_header(3);
+        retry.extend_from_slice(&[0xde, 0xad]);
+        retry.extend_from_slice(&[0x11; 16]);
+        assert!(matches!(
+            QuicPacket::parse(Bytes::from(retry)).unwrap(),
+            QuicPacket::Retry(QuicRetry { token, integrity_tag, .. })
+                if token == Bytes::from_static(&[0xde, 0xad]) && integrity_tag == [0x11; 16]
+        ));
+    }
+
+    #[test]
+    fn rejects_short_or_malformed_quic_packets() {
+        assert!(QuicPacket::parse(Bytes::new()).is_none());
+        assert!(QuicPacket::parse(Bytes::from_static(&[0x80, 0, 0, 0, 1, 0])).is_none());
+        assert!(QuicPacket::parse(Bytes::from_static(&[0x40, 0, 0, 0, 1, 0])).is_none());
+
+        let mut dcid_too_long = long_header(0);
+        dcid_too_long[5] = 21;
+        assert!(QuicPacket::parse(Bytes::from(dcid_too_long)).is_none());
+
+        let mut truncated_token = long_header(0);
+        truncated_token.push(0x02);
+        truncated_token.push(0xde);
+        assert!(QuicPacket::parse(Bytes::from(truncated_token)).is_none());
+
+        assert!(QuicPacket::parse(Bytes::from_static(&[0xc0, 0, 0, 0, 0, 4, 1, 2,])).is_none());
     }
 }

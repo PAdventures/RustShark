@@ -62,12 +62,22 @@ impl Protocol for IPv6Packet {
 
         match next_header {
             IpProtocol::IPv6HopByHop => {
+                if data.len() < offset + 2 {
+                    return None;
+                }
                 let hbh_next_header = IpProtocol::from(data[offset]);
                 let hbh_len = (data[offset + 1] as usize + 1) * 8;
+                if data.len() < offset + hbh_len {
+                    return None;
+                }
                 next_header = hbh_next_header;
                 offset += hbh_len;
             }
             _ => (),
+        }
+
+        if data.len() < 40 + payload_length as usize || offset > data.len() {
+            return None;
         }
 
         Some(Self {
@@ -95,6 +105,52 @@ impl Protocol for IPv6Packet {
             }
         }
         protocol.to_string()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn packet() -> Vec<u8> {
+        let mut data = vec![0x6a, 0xbc, 0xde, 0xf0, 0x00, 0x04, 0x11, 0x40];
+        data.extend_from_slice(&[0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]);
+        data.extend_from_slice(&[0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2]);
+        data.extend_from_slice(&[1, 2, 3, 4]);
+        data
+    }
+
+    #[test]
+    fn parses_valid_ipv6_packet() {
+        let parsed = IPv6Packet::parse(Bytes::from(packet())).unwrap();
+
+        assert_eq!(parsed.traffic_class, 0xab);
+        assert_eq!(parsed.flow_label, 0x0cdef0);
+        assert_eq!(parsed.payload_length, 4);
+        assert_eq!(parsed.next_header, IpProtocol::UDP);
+        assert_eq!(parsed.raw_payload, Bytes::from_static(&[1, 2, 3, 4]));
+    }
+
+    #[test]
+    fn rejects_ipv6_boundary_and_invalid_lengths() {
+        assert!(IPv6Packet::parse(Bytes::from_static(&[0; 39])).is_none());
+
+        let mut wrong_version = packet();
+        wrong_version[0] = 0x40;
+        assert!(IPv6Packet::parse(Bytes::from(wrong_version)).is_none());
+
+        let mut payload_too_long = packet();
+        payload_too_long[5] = 5;
+        assert!(IPv6Packet::parse(Bytes::from(payload_too_long)).is_none());
+    }
+
+    #[test]
+    fn rejects_truncated_hop_by_hop_extension() {
+        let mut data = packet();
+        data[6] = 0;
+        data[40] = 17;
+        data[41] = 1;
+        assert!(IPv6Packet::parse(Bytes::from(data)).is_none());
     }
 }
 

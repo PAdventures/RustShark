@@ -32,7 +32,13 @@ pub struct IPv4Packet {
 impl IPv4Packet {
     /// RFC 1071 one's complement checksum verification
     pub fn verify_checksum(data: Bytes) -> bool {
+        if data.len() < 20 {
+            return false;
+        }
         let ihl = ((data[0] & 0xF) as usize) * 4;
+        if ihl < 20 || data.len() < ihl || ihl % 2 != 0 {
+            return false;
+        }
         let mut sum: u32 = 0;
         for i in (0..ihl).step_by(2) {
             let word = u16::from_be_bytes([data[i], data[i + 1]]);
@@ -70,7 +76,7 @@ impl Protocol for IPv4Packet {
         let version = (data[0] >> 4) & 0xF;
         let ihl = (data[0] >> 0) & 0xF; // in 32-bit words
 
-        if version != 4 {
+        if version != 4 || ihl < 5 {
             return None;
         }
 
@@ -90,6 +96,11 @@ impl Protocol for IPv4Packet {
         let checksum = u16::from_be_bytes([data[10], data[11]]);
         let src: [u8; 4] = data[12..16].try_into().unwrap();
         let dst: [u8; 4] = data[16..20].try_into().unwrap();
+        let total_len = total_length as usize;
+
+        if total_len < header_len || data.len() < total_len {
+            return None;
+        }
 
         Some(Self {
             ihl,
@@ -105,7 +116,7 @@ impl Protocol for IPv4Packet {
             source_address: src,
             destination_address: dst,
             payload: None, // To be parsed later by higher layers
-            raw_payload: data.slice(header_len..total_length as usize),
+            raw_payload: data.slice(header_len..total_len),
         })
     }
 
@@ -123,6 +134,61 @@ impl Protocol for IPv4Packet {
         }
 
         protocol.to_string()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn packet() -> Bytes {
+        Bytes::from_static(&[
+            0x45, 0x00, 0x00, 0x18, 0x12, 0x34, 0x40, 0x00, 0x40, 0x06, 0x00, 0x00, 192, 168, 1, 1,
+            192, 168, 1, 2, 0xde, 0xad, 0xbe, 0xef,
+        ])
+    }
+
+    #[test]
+    fn parses_valid_ipv4_packet() {
+        let parsed = IPv4Packet::parse(packet()).unwrap();
+
+        assert_eq!(parsed.ihl, 5);
+        assert_eq!(parsed.total_length, 24);
+        assert_eq!(parsed.protocol, IpProtocol::TCP);
+        assert_eq!(parsed.source_address, [192, 168, 1, 1]);
+        assert_eq!(parsed.destination_address, [192, 168, 1, 2]);
+        assert_eq!(
+            parsed.raw_payload,
+            Bytes::from_static(&[0xde, 0xad, 0xbe, 0xef])
+        );
+    }
+
+    #[test]
+    fn rejects_ipv4_boundary_and_invalid_lengths() {
+        assert!(IPv4Packet::parse(Bytes::from_static(&[0; 19])).is_none());
+
+        let mut wrong_version = packet().to_vec();
+        wrong_version[0] = 0x65;
+        assert!(IPv4Packet::parse(Bytes::from(wrong_version)).is_none());
+
+        let mut ihl_too_small = packet().to_vec();
+        ihl_too_small[0] = 0x44;
+        assert!(IPv4Packet::parse(Bytes::from(ihl_too_small)).is_none());
+
+        let mut total_too_short = packet().to_vec();
+        total_too_short[3] = 19;
+        assert!(IPv4Packet::parse(Bytes::from(total_too_short)).is_none());
+
+        let mut total_too_long = packet().to_vec();
+        total_too_long[3] = 25;
+        assert!(IPv4Packet::parse(Bytes::from(total_too_long)).is_none());
+    }
+
+    #[test]
+    fn checksum_verification_rejects_short_headers() {
+        assert!(!IPv4Packet::verify_checksum(Bytes::from_static(&[
+            0x45, 0x00
+        ])));
     }
 }
 

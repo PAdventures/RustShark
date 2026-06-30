@@ -76,7 +76,7 @@ impl Protocol for IcmpPacket {
         let checksum = u16::from_be_bytes([data[2], data[3]]);
 
         let payload: Option<IcmpPayload> = match icmp_type {
-            IcmpType::RedirectMessage => {
+            IcmpType::RedirectMessage if data.len() >= 8 => {
                 let ip = [data[4], data[5], data[6], data[7]];
                 Some(IcmpPayload::RedirectMessage { ip })
             }
@@ -110,6 +110,64 @@ impl Protocol for IcmpPacket {
 
     fn format_protocol(protocol: IcmpPacket) -> String {
         protocol.to_string()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_echo_and_redirect_messages() {
+        let echo = IcmpPacket::parse(Bytes::from_static(&[8, 0, 0x12, 0x34, 1, 2])).unwrap();
+        assert_eq!(echo.icmp_type, IcmpType::EchoRequest);
+        assert_eq!(echo.checksum, 0x1234);
+        assert_eq!(echo.raw_payload, Bytes::from_static(&[1, 2]));
+
+        let redirect =
+            IcmpPacket::parse(Bytes::from_static(&[5, 1, 0, 0, 192, 168, 1, 1])).unwrap();
+        assert_eq!(
+            redirect.payload,
+            Some(IcmpPayload::RedirectMessage {
+                ip: [192, 168, 1, 1]
+            })
+        );
+    }
+
+    #[test]
+    fn rejects_unknown_or_short_icmp_packets_without_panicking() {
+        assert!(IcmpPacket::parse(Bytes::from_static(&[8, 0, 0])).is_none());
+        assert!(IcmpPacket::parse(Bytes::from_static(&[255, 0, 0, 0])).is_none());
+
+        let redirect = IcmpPacket::parse(Bytes::from_static(&[5, 1, 0, 0])).unwrap();
+        assert_eq!(redirect.payload, None);
+    }
+
+    #[test]
+    fn parses_timestamp_only_when_complete() {
+        let timestamp = IcmpPacket::parse(Bytes::from_static(&[
+            13, 0, 0, 0, 0, 1, 0, 2, 0, 0, 0, 3, 0, 0, 0, 4, 0, 0, 0, 5,
+        ]))
+        .unwrap();
+
+        assert_eq!(
+            timestamp.payload,
+            Some(IcmpPayload::Timestamp {
+                id: 1,
+                seq: 2,
+                origin_ts: 3,
+                recv_ts: 4,
+                transmit_ts: 5,
+                is_reply: false,
+            })
+        );
+
+        assert_eq!(
+            IcmpPacket::parse(Bytes::from_static(&[13, 0, 0, 0, 0, 1]))
+                .unwrap()
+                .payload,
+            None
+        );
     }
 }
 

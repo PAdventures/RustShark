@@ -100,3 +100,50 @@ impl Display for HttpResponse {
         write!(f, "[HTTP] {} {} {}", self.version, self.status, self.reason)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_http_request_and_body() {
+        let parsed = HttpMessage::parse(Bytes::from_static(
+            b"GET /index.html HTTP/1.1\r\nHost: example.com\r\n\r\nbody",
+        ))
+        .unwrap();
+
+        match parsed {
+            HttpMessage::Request(req) => {
+                assert_eq!(req.method, "GET");
+                assert_eq!(req.path, "/index.html");
+                assert_eq!(req.version, "HTTP/1.1");
+                assert_eq!(
+                    req.headers,
+                    vec![("Host".to_string(), "example.com".to_string())]
+                );
+                assert_eq!(req.body, Bytes::from_static(b"body"));
+            }
+            _ => panic!("expected request"),
+        }
+    }
+
+    #[test]
+    fn parses_http_response_and_rejects_malformed_headers() {
+        let parsed = HttpMessage::parse(Bytes::from_static(
+            b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n",
+        ))
+        .unwrap();
+
+        match parsed {
+            HttpMessage::Response(res) => {
+                assert_eq!(res.version, "HTTP/1.1");
+                assert_eq!(res.status, 404);
+                assert_eq!(res.reason, "Not Found");
+            }
+            _ => panic!("expected response"),
+        }
+
+        assert!(HttpMessage::parse(Bytes::from_static(b"GET / HTTP/1.1\r\n")).is_none());
+        assert!(HttpMessage::parse(Bytes::from_static(b"HTTP/1.1 nope\r\n\r\n")).is_none());
+    }
+}

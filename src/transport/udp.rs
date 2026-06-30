@@ -36,6 +36,11 @@ impl Protocol for UdpDatagram {
         let destination_port = u16::from_be_bytes([data[2], data[3]]);
         let length = u16::from_be_bytes([data[4], data[5]]);
         let checksum = u16::from_be_bytes([data[6], data[7]]);
+        let length_usize = length as usize;
+
+        if length_usize < 8 || data.len() < length_usize {
+            return None;
+        }
 
         Some(Self {
             source_port,
@@ -43,7 +48,7 @@ impl Protocol for UdpDatagram {
             length,
             checksum,
             payload: None, // To be parsed later by higher layers
-            raw_payload: data.slice(8..),
+            raw_payload: data.slice(8..length_usize),
         })
     }
 
@@ -58,6 +63,41 @@ impl Protocol for UdpDatagram {
         } else {
             protocol.to_string()
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn datagram() -> Bytes {
+        Bytes::from_static(&[
+            0x00, 0x35, 0x12, 0x34, 0x00, 0x0b, 0xab, 0xcd, 0xde, 0xad, 0xbe, 0xef,
+        ])
+    }
+
+    #[test]
+    fn parses_valid_udp_datagram() {
+        let parsed = UdpDatagram::parse(datagram()).unwrap();
+
+        assert_eq!(parsed.source_port, 53);
+        assert_eq!(parsed.destination_port, 0x1234);
+        assert_eq!(parsed.length, 11);
+        assert_eq!(parsed.checksum, 0xabcd);
+        assert_eq!(parsed.raw_payload, Bytes::from_static(&[0xde, 0xad, 0xbe]));
+    }
+
+    #[test]
+    fn rejects_invalid_udp_lengths() {
+        assert!(UdpDatagram::parse(Bytes::from_static(&[0; 7])).is_none());
+
+        let mut shorter_than_header = datagram().to_vec();
+        shorter_than_header[5] = 7;
+        assert!(UdpDatagram::parse(Bytes::from(shorter_than_header)).is_none());
+
+        let mut longer_than_buffer = datagram().to_vec();
+        longer_than_buffer[5] = 13;
+        assert!(UdpDatagram::parse(Bytes::from(longer_than_buffer)).is_none());
     }
 }
 

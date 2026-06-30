@@ -115,7 +115,7 @@ impl Protocol for TcpSegment {
         let urgent_pointer = u16::from_be_bytes([data[18], data[19]]);
 
         let header_length = (data_offset as usize) * 4;
-        if data.len() < header_length {
+        if header_length < 20 || data.len() < header_length {
             return None;
         }
 
@@ -146,6 +146,45 @@ impl Protocol for TcpSegment {
             }
         }
         protocol.to_string()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn segment() -> Bytes {
+        Bytes::from_static(&[
+            0x00, 0x50, 0x01, 0xbb, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x02, 0x50, 0x12,
+            0x20, 0x00, 0xab, 0xcd, 0x00, 0x00, b'O', b'K',
+        ])
+    }
+
+    #[test]
+    fn parses_valid_tcp_segment() {
+        let parsed = TcpSegment::parse(segment()).unwrap();
+
+        assert_eq!(parsed.source_port, 80);
+        assert_eq!(parsed.destination_port, 443);
+        assert_eq!(parsed.sequence_number, 1);
+        assert_eq!(parsed.acknowledgment_number, 2);
+        assert_eq!(parsed.data_offset, 5);
+        assert!(parsed.flags.syn);
+        assert!(parsed.flags.ack);
+        assert_eq!(parsed.raw_payload, Bytes::from_static(b"OK"));
+    }
+
+    #[test]
+    fn rejects_short_or_invalid_tcp_header_lengths() {
+        assert!(TcpSegment::parse(Bytes::from_static(&[0; 19])).is_none());
+
+        let mut offset_too_small = segment().to_vec();
+        offset_too_small[12] = 0x40;
+        assert!(TcpSegment::parse(Bytes::from(offset_too_small)).is_none());
+
+        let mut offset_too_large = segment().to_vec();
+        offset_too_large[12] = 0x60;
+        assert!(TcpSegment::parse(Bytes::from(offset_too_large)).is_none());
     }
 }
 

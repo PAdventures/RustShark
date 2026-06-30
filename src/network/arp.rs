@@ -147,3 +147,59 @@ impl Debug for ArpPacket {
         )
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn packet(operation: u16) -> Bytes {
+        let mut data = vec![
+            0x00,
+            0x01,
+            0x08,
+            0x00,
+            0x06,
+            0x04,
+            (operation >> 8) as u8,
+            operation as u8,
+        ];
+        data.extend_from_slice(&[0, 1, 2, 3, 4, 5]);
+        data.extend_from_slice(&[192, 168, 1, 10]);
+        data.extend_from_slice(&[6, 7, 8, 9, 10, 11]);
+        data.extend_from_slice(&[192, 168, 1, 1]);
+        Bytes::from(data)
+    }
+
+    #[test]
+    fn parses_request_reply_and_unknown_operation() {
+        assert_eq!(
+            ArpPacket::parse(packet(1)).unwrap().operation,
+            ArpOperation::Request
+        );
+        assert_eq!(
+            ArpPacket::parse(packet(2)).unwrap().operation,
+            ArpOperation::Reply
+        );
+        assert_eq!(
+            ArpPacket::parse(packet(9)).unwrap().operation,
+            ArpOperation::Unknown(9)
+        );
+    }
+
+    #[test]
+    fn rejects_short_or_unsupported_arp_packets() {
+        assert!(ArpPacket::parse(Bytes::from_static(&[0; 27])).is_none());
+
+        let mut bad_hardware = packet(1).to_vec();
+        bad_hardware[1] = 2;
+        assert!(ArpPacket::parse(Bytes::from(bad_hardware)).is_none());
+
+        let mut bad_protocol = packet(1).to_vec();
+        bad_protocol[3] = 0x86;
+        assert!(ArpPacket::parse(Bytes::from(bad_protocol)).is_none());
+
+        let mut bad_lengths = packet(1).to_vec();
+        bad_lengths[4] = 5;
+        assert!(ArpPacket::parse(Bytes::from(bad_lengths)).is_none());
+    }
+}
