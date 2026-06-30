@@ -3,7 +3,7 @@ pub mod ip_protocol;
 pub mod ipv4;
 pub mod ipv6;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum NetworkPacket {
     IPv4(ipv4::IPv4Packet),
     IPv6(ipv6::IPv6Packet),

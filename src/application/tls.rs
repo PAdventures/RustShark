@@ -4,14 +4,14 @@ use bytes::Bytes;
 
 use crate::traits::Protocol;
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct TlsRecord {
     pub content_type: TlsContentType,
     pub version: TlsVersion,
     pub payload: Bytes,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum TlsContentType {
     ChangeCipherSpec,
     Alert,
@@ -20,7 +20,7 @@ pub enum TlsContentType {
     Unknown(u8),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum TlsHandshakeType {
     ClientHello,
     ServerHello,
@@ -30,7 +30,7 @@ pub enum TlsHandshakeType {
     Unknown(u8),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TlsVersion {
     pub major: u8,
     pub minor: u8,
@@ -97,6 +97,9 @@ impl Display for TlsRecord {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self.content_type {
             TlsContentType::Handshake => {
+                if self.payload.is_empty() {
+                    return write!(f, "[TLSv{}] Handshake=Unknown(empty)", self.version);
+                }
                 let hs_type = match self.payload[0] {
                     1 => TlsHandshakeType::ClientHello,
                     2 => TlsHandshakeType::ServerHello,
@@ -117,6 +120,9 @@ impl Display for TlsRecord {
                 );
             }
             TlsContentType::Alert => {
+                if self.payload.len() < 2 {
+                    return write!(f, "[TLSv{}] Alert malformed", self.version);
+                }
                 let level = match self.payload[0] {
                     1 => "warning",
                     2 => "fatal",
@@ -138,5 +144,39 @@ impl Display for TlsRecord {
                 );
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_tls_record_and_known_versions() {
+        let parsed = TlsRecord::parse(Bytes::from_static(&[22, 3, 3, 0, 4, 1, 0, 0, 0])).unwrap();
+
+        assert_eq!(parsed.content_type, TlsContentType::Handshake);
+        assert_eq!(parsed.version, TlsVersion { major: 3, minor: 3 });
+        assert_eq!(parsed.payload, Bytes::from_static(&[1, 0, 0, 0]));
+        assert_eq!(format!("{}", parsed), "[TLSv1.2] Handshake=ClientHello");
+    }
+
+    #[test]
+    fn rejects_short_unsupported_or_truncated_tls_records() {
+        assert!(TlsRecord::parse(Bytes::from_static(&[22, 3, 3, 0])).is_none());
+        assert!(TlsRecord::parse(Bytes::from_static(&[22, 2, 0, 0, 0])).is_none());
+        assert!(TlsRecord::parse(Bytes::from_static(&[22, 3, 3, 0, 2, 1])).is_none());
+    }
+
+    #[test]
+    fn displays_empty_handshake_and_short_alert_without_panicking() {
+        let handshake = TlsRecord::parse(Bytes::from_static(&[22, 3, 3, 0, 0])).unwrap();
+        assert_eq!(
+            format!("{}", handshake),
+            "[TLSv1.2] Handshake=Unknown(empty)"
+        );
+
+        let alert = TlsRecord::parse(Bytes::from_static(&[21, 3, 3, 0, 1, 1])).unwrap();
+        assert_eq!(format!("{}", alert), "[TLSv1.2] Alert malformed");
     }
 }

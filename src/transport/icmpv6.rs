@@ -4,7 +4,7 @@ use bytes::Bytes;
 
 use crate::{traits::Protocol, utils};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Icmpv6Packet {
     pub icmp_type: Icmpv6Type,
     pub code: u8,
@@ -13,7 +13,41 @@ pub struct Icmpv6Packet {
     pub raw_payload: Bytes,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_echo_and_neighbor_advertisement() {
+        let echo = Icmpv6Packet::parse(Bytes::from_static(&[128, 0, 0x12, 0x34, 1])).unwrap();
+        assert_eq!(echo.icmp_type, Icmpv6Type::EchoRequest);
+        assert_eq!(echo.checksum, 0x1234);
+
+        let mut data = vec![136, 0, 0, 0, 0xe0, 0, 0, 0];
+        data.extend_from_slice(&[0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]);
+        let parsed = Icmpv6Packet::parse(Bytes::from(data)).unwrap();
+        assert_eq!(
+            parsed.payload,
+            Some(Icmpv6Payload::NeighborAdvertisement {
+                router: true,
+                solicited: true,
+                _override: true,
+                target_addr: [0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            })
+        );
+    }
+
+    #[test]
+    fn rejects_unknown_or_short_icmpv6_packets() {
+        assert!(Icmpv6Packet::parse(Bytes::from_static(&[128, 0, 0])).is_none());
+        assert!(Icmpv6Packet::parse(Bytes::from_static(&[255, 0, 0, 0])).is_none());
+
+        let truncated_ns = Icmpv6Packet::parse(Bytes::from_static(&[135, 0, 0, 0, 0])).unwrap();
+        assert_eq!(truncated_ns.payload, None);
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Icmpv6Type {
     DestinationUnreachable,
     PacketTooBig,
@@ -68,7 +102,7 @@ impl Icmpv6Type {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Icmpv6Payload {
     RouterAdvertisement {
         cur_hop_lim: u8,

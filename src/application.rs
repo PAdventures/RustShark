@@ -11,7 +11,7 @@ use crate::{
     transport::{tcp::TcpSegment, udp::UdpDatagram},
 };
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub enum ApplicationMessage {
     HTTP(http::HttpMessage),
     TLS(tls::TlsRecord),

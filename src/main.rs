@@ -97,7 +97,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     })?;
 
     let mut capture = Capture::from_device(interface.as_str())?
-        .promisc(true)
         .immediate_mode(immediate_mode)
         .open()?;
 

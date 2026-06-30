@@ -4,13 +4,13 @@ use bytes::Bytes;
 
 use crate::traits::Protocol;
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub enum HttpMessage {
     Request(HttpRequest),
     Response(HttpResponse),
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct HttpRequest {
     pub method: String,
     pub path: String,
@@ -19,7 +19,7 @@ pub struct HttpRequest {
     pub body: Bytes,
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct HttpResponse {
     pub version: String,
     pub status: u16,
@@ -98,5 +98,52 @@ impl Display for HttpRequest {
 impl Display for HttpResponse {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "[HTTP] {} {} {}", self.version, self.status, self.reason)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_http_request_and_body() {
+        let parsed = HttpMessage::parse(Bytes::from_static(
+            b"GET /index.html HTTP/1.1\r\nHost: example.com\r\n\r\nbody",
+        ))
+        .unwrap();
+
+        match parsed {
+            HttpMessage::Request(req) => {
+                assert_eq!(req.method, "GET");
+                assert_eq!(req.path, "/index.html");
+                assert_eq!(req.version, "HTTP/1.1");
+                assert_eq!(
+                    req.headers,
+                    vec![("Host".to_string(), "example.com".to_string())]
+                );
+                assert_eq!(req.body, Bytes::from_static(b"body"));
+            }
+            _ => panic!("expected request"),
+        }
+    }
+
+    #[test]
+    fn parses_http_response_and_rejects_malformed_headers() {
+        let parsed = HttpMessage::parse(Bytes::from_static(
+            b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n",
+        ))
+        .unwrap();
+
+        match parsed {
+            HttpMessage::Response(res) => {
+                assert_eq!(res.version, "HTTP/1.1");
+                assert_eq!(res.status, 404);
+                assert_eq!(res.reason, "Not Found");
+            }
+            _ => panic!("expected response"),
+        }
+
+        assert!(HttpMessage::parse(Bytes::from_static(b"GET / HTTP/1.1\r\n")).is_none());
+        assert!(HttpMessage::parse(Bytes::from_static(b"HTTP/1.1 nope\r\n\r\n")).is_none());
     }
 }

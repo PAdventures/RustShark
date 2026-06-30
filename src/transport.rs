@@ -15,7 +15,7 @@ pub mod igmp;
 pub mod tcp;
 pub mod udp;
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub enum TransportPacket {
     TCP(tcp::TcpSegment),
     UDP(udp::UdpDatagram),

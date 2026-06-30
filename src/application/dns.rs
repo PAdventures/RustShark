@@ -4,7 +4,7 @@ use bytes::Bytes;
 
 use crate::{dns_cache::SharedDnsCache, traits::Protocol, utils};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct DnsMessage {
     pub transaction_id: u16,
     pub is_response: bool,
@@ -23,13 +23,13 @@ pub struct DnsMessage {
     pub additionals: Vec<DnsAnswer>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct DnsQuestion {
     pub name: String,
     pub qtype: DnsType,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct DnsAnswer {
     pub name: String,
     pub rtype: DnsType,
@@ -37,7 +37,7 @@ pub struct DnsAnswer {
     pub rdata: DnsRData,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum DnsType {
     A,
     NS,
@@ -68,7 +68,7 @@ impl DnsType {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum DnsRData {
     A([u8; 4]),
     NS(String),
@@ -123,6 +123,7 @@ fn parse_name(data: &[u8], mut pos: usize) -> Option<(String, usize)> {
     let mut name = String::new();
     let mut jumped = false;
     let mut end_pos = pos;
+    let mut jumps = 0;
 
     loop {
         if pos >= data.len() {
@@ -144,6 +145,10 @@ fn parse_name(data: &[u8], mut pos: usize) -> Option<(String, usize)> {
                 end_pos = pos + 2;
             }
             jumped = true;
+            jumps += 1;
+            if jumps > data.len() {
+                return None;
+            }
             pos = offset;
         } else {
             pos += 1;
@@ -164,7 +169,7 @@ fn parse_name(data: &[u8], mut pos: usize) -> Option<(String, usize)> {
 
 impl Protocol for DnsMessage {
     fn parse(data: Bytes) -> Option<Self> {
-        fn parse_responses(data: &[u8], mut pos: usize) -> Option<DnsAnswer> {
+        fn parse_responses(data: &[u8], mut pos: usize) -> Option<(DnsAnswer, usize)> {
             let Some((name, next_pos)) = parse_name(data, pos) else {
                 return None;
             };
@@ -197,10 +202,10 @@ impl Protocol for DnsMessage {
                     .map(|(n, _)| DnsRData::PTR(n))
                     .unwrap_or(DnsRData::Raw(rdata_bytes.to_vec())),
                 DnsType::SOA => {
-                    let mname = parse_name(data, pos)?.0;
-                    pos += mname.len() + 2; // name + null byte
-                    let rname = parse_name(data, pos)?.0;
-                    pos += rname.len() + 2;
+                    let (mname, next_pos) = parse_name(data, pos)?;
+                    pos = next_pos;
+                    let (rname, next_pos) = parse_name(data, pos)?;
+                    pos = next_pos;
                     if pos + 20 > data.len() {
                         return None;
                     }
@@ -254,6 +259,9 @@ impl Protocol for DnsMessage {
                     }
                 }
                 DnsType::TXT => {
+                    if rdata_bytes.is_empty() {
+                        return None;
+                    }
                     let txt_len = rdata_bytes[0] as usize;
                     if txt_len + 1 > rdata_bytes.len() {
                         return None;
@@ -268,12 +276,15 @@ impl Protocol for DnsMessage {
 
             pos += rdlen;
 
-            Some(DnsAnswer {
-                name,
-                rtype,
-                ttl,
-                rdata,
-            })
+            Some((
+                DnsAnswer {
+                    name,
+                    rtype,
+                    ttl,
+                    rdata,
+                },
+                pos,
+            ))
         }
 
         if data.len() < 12 {
@@ -317,18 +328,21 @@ impl Protocol for DnsMessage {
         }
 
         for _ in 0..ancount {
-            let answer = parse_responses(&data, pos)?;
+            let (answer, next_pos) = parse_responses(&data, pos)?;
             answers.push(answer);
+            pos = next_pos;
         }
 
         for _ in 0..authcount {
-            let answer = parse_responses(&data, pos)?;
+            let (answer, next_pos) = parse_responses(&data, pos)?;
             authorities.push(answer);
+            pos = next_pos;
         }
 
         for _ in 0..addcount {
-            let answer = parse_responses(&data, pos)?;
+            let (answer, next_pos) = parse_responses(&data, pos)?;
             additionals.push(answer);
+            pos = next_pos;
         }
 
         Some(Self {
@@ -352,6 +366,74 @@ impl Protocol for DnsMessage {
 
     fn format_protocol(protocol: DnsMessage) -> String {
         protocol.to_string()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn query() -> Bytes {
+        Bytes::from_static(&[
+            0x12, 0x34, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 7, b'e', b'x',
+            b'a', b'm', b'p', b'l', b'e', 3, b'c', b'o', b'm', 0, 0x00, 0x01, 0x00, 0x01,
+        ])
+    }
+
+    #[test]
+    fn parses_dns_query() {
+        let parsed = DnsMessage::parse(query()).unwrap();
+
+        assert_eq!(parsed.transaction_id, 0x1234);
+        assert!(!parsed.is_response);
+        assert!(parsed.recursion_desired);
+        assert_eq!(parsed.questions.len(), 1);
+        assert_eq!(parsed.questions[0].name, "example.com");
+        assert_eq!(parsed.questions[0].qtype, DnsType::A);
+    }
+
+    #[test]
+    fn parses_multiple_answers_and_advances_cursor() {
+        let mut data = vec![
+            0x12, 0x34, 0x81, 0x80, 0x00, 0x01, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 7, b'e', b'x',
+            b'a', b'm', b'p', b'l', b'e', 3, b'c', b'o', b'm', 0, 0x00, 0x01, 0x00, 0x01,
+        ];
+        data.extend_from_slice(&[
+            0xc0, 0x0c, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 60, 0x00, 0x04, 93, 184, 216, 34,
+        ]);
+        data.extend_from_slice(&[
+            0xc0, 0x0c, 0x00, 0x1c, 0x00, 0x01, 0x00, 0x00, 0x00, 60, 0x00, 0x10, 0x20, 0x01, 0x0d,
+            0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+        ]);
+
+        let parsed = DnsMessage::parse(Bytes::from(data)).unwrap();
+
+        assert_eq!(parsed.answers.len(), 2);
+        assert_eq!(parsed.answers[0].rdata, DnsRData::A([93, 184, 216, 34]));
+        assert_eq!(
+            parsed.answers[1].rdata,
+            DnsRData::AAAA([0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1])
+        );
+    }
+
+    #[test]
+    fn rejects_truncated_or_malformed_dns_messages() {
+        assert!(DnsMessage::parse(Bytes::from_static(&[0; 11])).is_none());
+
+        let mut truncated_question = query().to_vec();
+        truncated_question.pop();
+        assert!(DnsMessage::parse(Bytes::from(truncated_question)).is_none());
+
+        let pointer_loop = Bytes::from_static(&[
+            0x12, 0x34, 0x01, 0x00, 0x00, 0x01, 0, 0, 0, 0, 0, 0, 0xc0, 0x0c, 0, 1, 0, 1,
+        ]);
+        assert!(DnsMessage::parse(pointer_loop).is_none());
+
+        let txt_with_bad_len = Bytes::from_static(&[
+            0x12, 0x34, 0x81, 0x80, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 16, 0, 1, 0, 0, 0, 1, 0, 2, 3,
+            b'a',
+        ]);
+        assert!(DnsMessage::parse(txt_with_bad_len).is_none());
     }
 }
 
